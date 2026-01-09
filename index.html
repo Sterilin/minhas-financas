@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Minhas Finanças Pro</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = { darkMode: 'class' }
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body class="bg-gray-100 text-gray-800 h-screen flex flex-col dark:bg-gray-900 dark:text-gray-100 transition-theme" id="app-body">
+
+    <header class="bg-white shadow-sm z-10 dark:bg-gray-800 dark:border-gray-700 transition-theme flex-shrink-0">
+        <div class="max-w-4xl mx-auto px-4 py-4 flex justify-between items-center">
+            <div class="flex items-center gap-2">
+                <div class="bg-blue-600 text-white p-2 rounded-lg">
+                    <i class="fa-solid fa-wallet"></i>
+                </div>
+                <h1 class="text-xl font-bold text-gray-800 tracking-tight dark:text-white">Finanças<span class="text-blue-600 dark:text-blue-400">Pro</span></h1>
+            </div>
+            
+            <div class="flex items-center gap-3">
+                <button onclick="Handlers.togglePrivacy()" id="btn-privacy" class="p-2 rounded-full text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-700 transition" title="Ocultar Valores">
+                    <i class="fa-regular fa-eye"></i>
+                </button>
+                <button onclick="Handlers.toggleTheme()" id="btn-theme" class="p-2 rounded-full text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-700 transition" title="Mudar Tema">
+                    <i class="fa-regular fa-moon"></i>
+                </button>
+                <div class="text-sm text-gray-500 hidden sm:block border-l pl-3 ml-1 dark:text-gray-400">
+                    <i class="fa-regular fa-calendar mr-1"></i> <span id="current-date"></span>
+                </div>
+            </div>
+        </div>
+        
+        <nav class="max-w-4xl mx-auto px-4 mt-2 flex gap-4 sm:gap-6 border-b border-gray-200 dark:border-gray-700 overflow-x-auto">
+            <button onclick="Handlers.switchTab('dashboard')" id="btn-dashboard" class="tab-active py-3 px-1 transition-colors flex items-center gap-2 shrink-0 text-sm font-medium">
+                <i class="fa-solid fa-chart-pie"></i> Resumo
+            </button>
+            <button onclick="Handlers.switchTab('report')" id="btn-report" class="tab-inactive py-3 px-1 transition-colors flex items-center gap-2 shrink-0 text-sm font-medium">
+                <i class="fa-solid fa-chart-line"></i> Relatório
+            </button>
+            <button onclick="Handlers.switchTab('compare')" id="btn-compare" class="tab-inactive py-3 px-1 transition-colors flex items-center gap-2 shrink-0 text-sm font-medium">
+                <i class="fa-solid fa-right-left"></i> Comparativo
+            </button>
+            <button onclick="Handlers.switchTab('goals')" id="btn-goals" class="tab-inactive py-3 px-1 transition-colors flex items-center gap-2 shrink-0 text-sm font-medium">
+                <i class="fa-solid fa-bullseye"></i> Metas
+            </button>
+            <button onclick="Handlers.switchTab('expenses')" id="btn-data" class="tab-inactive py-3 px-1 transition-colors flex items-center gap-2 shrink-0 text-sm font-medium">
+                <i class="fa-solid fa-database"></i> Dados
+            </button>
+        </nav>
+
+        <div id="sub-nav-data" class="hidden bg-gray-50 dark:bg-gray-800/50 border-b border-gray-200 dark:border-gray-700 transition-all">
+            <div class="max-w-4xl mx-auto px-4 py-2 flex gap-3 overflow-x-auto">
+                <button onclick="Handlers.switchTab('expenses')" id="btn-expenses" class="subtab-active px-3 py-1.5 rounded-md text-xs font-medium transition-colors flex items-center gap-2">
+                    <i class="fa-solid fa-receipt"></i> Outros
+                </button>
+                <button onclick="Handlers.switchTab('history')" id="btn-history" class="subtab-inactive px-3 py-1.5 rounded-md text-xs font-medium transition-colors flex items-center gap-2">
+                    <i class="fa-solid fa-clock-rotate-left"></i> Histórico Santander
+                </button>
+                <button onclick="Handlers.switchTab('santander')" id="btn-santander" class="subtab-inactive px-3 py-1.5 rounded-md text-xs font-medium transition-colors flex items-center gap-2 text-rose-600 dark:text-rose-400">
+                    <i class="fa-brands fa-cc-mastercard"></i> Cartão Santander
+                </button>
+                <button onclick="Handlers.switchTab('consolidated')" id="btn-consolidated" class="subtab-inactive px-3 py-1.5 rounded-md text-xs font-medium transition-colors flex items-center gap-2 text-indigo-600 dark:text-indigo-400">
+                    <i class="fa-solid fa-layer-group"></i> Consolidado
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <main class="flex-1 overflow-y-auto p-4">
+        <div class="max-w-4xl mx-auto">
+            
+            <section id="view-dashboard" class="fade-in">
+                </section>
+
+            <section id="view-expenses" class="hidden fade-in">
+                <div class="bg-white p-6 rounded-xl card-shadow dark:bg-gray-800 transition-theme mb-6">
+                    <div class="flex justify-between items-center mb-6"><h3 class="font-bold text-gray-800 dark:text-white text-lg"><i class="fa-solid fa-receipt text-rose-500 mr-2"></i> Detalhamento - Outros</h3></div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-sm text-gray-500 dark:text-gray-400">
+                            <thead class="bg-gray-50 text-xs uppercase text-gray-700 dark:bg-gray-700 dark:text-gray-400">
+                                <tr>
+                                    <th class="px-3 py-2 rounded-l-lg">Data</th>
+                                    <th class="px-3 py-2">Categoria</th>
+                                    <th class="px-3 py-2">Descrição</th>
+                                    <th class="px-3 py-2 text-right">Valor</th>
+                                </tr>
+                            </thead>
+                            <tbody id="expenses-table-body" class="divide-y divide-gray-100 dark:divide-gray-700"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <section id="view-report" class="hidden fade-in">
+                <div class="bg-white p-4 rounded-xl card-shadow mb-4 dark:bg-gray-800 transition-theme">
+                    <div class="flex flex-col gap-4">
+                        <div class="flex flex-wrap gap-4 justify-between items-end">
+                            <div class="flex gap-4 items-end flex-wrap">
+                                <div><label class="block text-xs font-medium text-gray-500 mb-2 dark:text-gray-400">Anos Selecionados</label><div class="flex flex-wrap gap-2" id="year-toggles-container"></div></div>
+                                <div><label class="block text-xs font-medium text-gray-500 mb-1 dark:text-gray-400">Agrupamento</label><select id="filter-view" onchange="Handlers.handleViewChange()" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-32 p-2 dark:bg-gray-700 dark:border-gray-600 dark:text-white"><option value="monthly">Mensal</option><option value="quarterly">Trimestral</option></select></div>
+                            </div>
+                        </div>
+                        <div id="month-filter-row" class="border-t border-gray-100 pt-3 dark:border-gray-700"><div class="flex justify-between items-center mb-2"><label class="block text-xs font-medium text-gray-500 dark:text-gray-400" id="month-filter-label">Filtrar Períodos</label></div><div id="month-buttons-container" class="flex flex-col gap-3"></div></div>
+                    </div>
+                </div>
+                <h3 class="text-sm font-bold text-gray-700 dark:text-gray-200 mb-3 px-1">Acumulados do período</h3>
+                <div class="grid grid-cols-3 gap-3 mb-4">
+                    <div class="bg-white p-3 rounded-xl card-shadow border-b-2 border-emerald-500 dark:bg-gray-800 transition-theme text-center"><p class="text-[10px] uppercase font-semibold text-gray-500 dark:text-gray-400">Receita</p><p class="text-sm sm:text-base font-bold text-emerald-600 dark:text-emerald-400 val-privacy" id="total-gains">R$ 0,00</p></div>
+                    <div class="bg-white p-3 rounded-xl card-shadow border-b-2 border-rose-500 dark:bg-gray-800 transition-theme text-center"><p class="text-[10px] uppercase font-semibold text-gray-500 dark:text-gray-400">Gastos</p><p class="text-sm sm:text-base font-bold text-rose-600 dark:text-rose-400 val-privacy" id="total-costs">R$ 0,00</p></div>
+                    <div class="bg-white p-3 rounded-xl card-shadow border-b-2 border-blue-500 dark:bg-gray-800 transition-theme text-center"><p class="text-[10px] uppercase font-semibold text-gray-500 dark:text-gray-400">Poupança</p><p class="text-sm sm:text-base font-bold text-blue-600 dark:text-blue-400 val-privacy" id="avg-savings">0%</p></div>
+                </div>
+                <div class="bg-white p-4 rounded-xl card-shadow mb-4 dark:bg-gray-800 transition-theme text-center"><p class="text-xs text-gray-500 dark:text-gray-400 mb-1 font-semibold uppercase">Saldo do Período</p><p class="text-2xl font-bold text-blue-600 dark:text-blue-400 val-privacy" id="yearly-balance">R$ 0,00</p></div>
+                <div class="bg-white p-4 rounded-xl card-shadow relative dark:bg-gray-800 transition-theme" style="height: 400px;"><div class="flex justify-between items-center mb-4 pl-2 border-l-4 border-blue-500"><h3 class="text-sm font-semibold text-gray-700 dark:text-gray-200" id="chart-title">Fluxo de Caixa Detalhado</h3><span id="chart-status-text" class="text-[10px] text-gray-400 uppercase tracking-wide"></span></div><div class="w-full h-[320px] val-privacy"><canvas id="financeChart"></canvas></div></div>
+                <div class="mt-6 bg-white p-4 rounded-xl card-shadow relative dark:bg-gray-800 transition-theme">
+                    <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-4 pl-2 border-l-4 border-indigo-500 gap-4">
+                        <div><h3 class="text-sm font-semibold text-gray-700 dark:text-gray-200">Estimativa Futura (Projeção)</h3><p class="text-[10px] text-gray-400 uppercase tracking-wide">Projeção de Saldo (Histórico vs Projeção)</p></div>
+                        <div class="w-full md:w-1/3 flex flex-col">
+                            <div class="flex justify-between text-[10px] font-bold text-gray-400 dark:text-gray-500 mb-1 uppercase tracking-wide"><span id="proj-slider-label-min">1 Mês</span><span id="proj-slider-label-val" class="text-indigo-500 font-bold">6 Meses</span><span id="proj-slider-label-max">6 Meses</span></div>
+                            <input type="range" id="projection-slider" min="1" max="6" step="1" value="6" class="w-full h-1.5 bg-gray-200 rounded-lg appearance-none cursor-pointer dark:bg-gray-700 accent-indigo-600" oninput="Handlers.handleProjectionSliderChange(this.value)">
+                            <div class="text-[10px] text-gray-400 text-right mt-1 font-medium">Intervalo de Confiança: 95%</div>
+                        </div>
+                    </div>
+                    <div class="w-full h-[320px] val-privacy"><canvas id="projectionChart"></canvas></div>
+                    <div class="mt-4 px-4 py-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg border border-gray-100 dark:border-gray-700 text-xs text-gray-500 dark:text-gray-400 leading-relaxed"><strong class="text-gray-700 dark:text-gray-200 block mb-1">Metodologia: Suavização Exponencial Holt-Winters (AAA)</strong> O gráfico utiliza o modelo estatístico <strong>Holt-Winters Aditivo</strong> para projetar os valores futuros. As áreas sombreadas (Limites Superior e Inferior) representam o intervalo de confiança estatístico.</div>
+                    <div id="projection-analysis" class="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-4 border-t border-gray-100 dark:border-gray-700 pt-4"></div>
+                </div>
+            </section>
+
+            <section id="view-compare" class="hidden fade-in">
+                <div class="bg-white p-5 rounded-xl card-shadow mb-6 dark:bg-gray-800 transition-theme">
+                    <div class="flex flex-col gap-6">
+                        <div class="flex flex-wrap justify-between items-center gap-2">
+                            <h3 class="font-bold text-gray-800 dark:text-white flex items-center gap-2"><i class="fa-solid fa-scale-balanced text-blue-500"></i> Comparativo</h3>
+                            <div class="flex items-center gap-4">
+                                <div class="flex items-center gap-2">
+                                    <span class="text-xs text-gray-500 font-medium dark:text-gray-400">Auto Sinc.</span>
+                                    <label class="relative inline-flex items-center cursor-pointer">
+                                      <input type="checkbox" id="auto-sync-toggle" class="sr-only peer" onchange="Handlers.toggleAutoSync()">
+                                      <div class="w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
+                                    </label>
+                                </div>
+                                <select id="compare-type" onchange="Handlers.updateCompareSelectors()" class="bg-blue-50 border border-blue-200 text-blue-800 text-sm font-semibold rounded-lg p-2 dark:bg-blue-900/30 dark:border-blue-800 dark:text-blue-300 outline-none focus:ring-1 focus:ring-blue-500">
+                                    <option value="monthly">Mensal</option><option value="quarterly">Trimestral</option><option value="yearly">Anual</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="border-b border-gray-100 dark:border-gray-700 pb-6">
+                            <h3 class="font-semibold text-gray-700 dark:text-gray-200 mb-4 px-1">Análise Avançada</h3>
+                            <div class="grid grid-cols-1 gap-4">
+                                <div class="bg-gray-50 p-5 rounded-xl border border-gray-100 dark:bg-gray-900/50 dark:border-gray-700 transition-theme w-full">
+                                    <div class="flex justify-between items-center mb-4">
+                                         <div><h4 class="text-sm font-bold text-gray-700 dark:text-gray-200">Inflação Pessoal (Cartão)</h4><p class="text-[10px] text-gray-400">Evolução de gastos por categoria na Fatura (12 meses)</p></div>
+                                         <select id="inflation-category-select" onchange="Handlers.updateInflationChart()" class="text-xs bg-white border border-gray-200 rounded p-1 dark:bg-gray-700 dark:border-gray-600 dark:text-white outline-none focus:ring-1 focus:ring-blue-500 shadow-sm cursor-pointer"></select>
+                                     </div>
+                                     <div class="w-full h-64 val-privacy"><canvas id="inflationChart"></canvas></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <h3 class="font-semibold text-gray-700 dark:text-gray-200 px-1">Comparativo Personalizado</h3>
+                        <div class="flex flex-col md:flex-row items-center justify-center gap-4 bg-gray-50 p-4 rounded-xl dark:bg-gray-800/50 border border-gray-100 dark:border-gray-700">
+                            <div class="flex-1 w-full space-y-2">
+                                <label class="text-xs font-bold text-gray-500 uppercase tracking-wide">Referência (A)</label>
+                                <div class="flex gap-2">
+                                    <select id="comp-year-a" onchange="Handlers.onSelectionChange('A')" class="bg-white border border-gray-300 text-sm rounded-lg p-2.5 w-1/3 dark:bg-gray-700 dark:border-gray-600 dark:text-white outline-none focus:ring-1 focus:ring-blue-500 transition-colors cursor-pointer"></select>
+                                    <select id="comp-period-a" onchange="Handlers.onSelectionChange('A')" class="bg-white border border-gray-300 text-sm rounded-lg p-2.5 w-2/3 dark:bg-gray-700 dark:border-gray-600 dark:text-white outline-none focus:ring-1 focus:ring-blue-500 transition-colors cursor-pointer"></select>
+                                </div>
+                            </div>
+                            <div class="shrink-0 flex items-center justify-center w-10 h-10 rounded-full bg-white dark:bg-gray-700 shadow-sm border border-gray-200 dark:border-gray-600 z-10 font-bold text-gray-400 text-xs mt-4 md:mt-0">VS</div>
+                            <div class="flex-1 w-full space-y-2">
+                                <label class="text-xs font-bold text-gray-500 uppercase tracking-wide">Comparação (B)</label>
+                                <div class="flex gap-2">
+                                    <select id="comp-year-b" onchange="Handlers.onSelectionChange('B')" class="bg-white border border-gray-300 text-sm rounded-lg p-2.5 w-1/3 dark:bg-gray-700 dark:border-gray-600 dark:text-white outline-none focus:ring-1 focus:ring-blue-500 transition-colors cursor-pointer"></select>
+                                    <select id="comp-period-b" onchange="Handlers.onSelectionChange('B')" class="bg-white border border-gray-300 text-sm rounded-lg p-2.5 w-2/3 dark:bg-gray-700 dark:border-gray-600 dark:text-white outline-none focus:ring-1 focus:ring-blue-500 transition-colors cursor-pointer"></select>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div id="slider-container" class="bg-gray-50 p-4 rounded-xl border border-gray-100 dark:bg-gray-800/50 dark:border-gray-700 mt-2">
+                            <h4 class="text-[10px] font-bold text-gray-400 uppercase mb-3">Diferença de tempo</h4>
+                            <div id="slider-labels" class="flex justify-between text-[10px] font-bold text-gray-400 dark:text-gray-500 mb-2 uppercase tracking-wide"></div>
+                            <input type="range" id="compare-slider" min="3" max="12" step="3" value="12" oninput="Handlers.handleSliderChange(this.value)">
+                            <div id="compare-diff-indicator" class="text-center text-xs font-medium text-gray-500 dark:text-gray-400 mt-2"></div>
+                        </div>
+                    </div>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
+                        <div class="md:col-span-2 bg-gray-50 dark:bg-gray-900/50 p-3 rounded-lg border border-gray-100 dark:border-gray-700 h-80 flex flex-col">
+                            <h4 class="text-xs font-semibold text-gray-500 uppercase mb-1 dark:text-gray-400">Fluxo de Caixa Comparativo</h4>
+                            <div class="flex-1 w-full val-privacy h-[17.5rem]"><canvas id="compareChart1"></canvas></div>
+                        </div>
+                        <div class="bg-gray-50 dark:bg-gray-900/50 p-4 rounded-lg border border-gray-100 dark:border-gray-700 h-80 flex flex-col">
+                            <h4 class="text-xs font-semibold text-gray-500 uppercase mb-3 dark:text-gray-400">Evolução do Saldo</h4>
+                            <div class="flex-1 w-full val-privacy flex items-end justify-center gap-8 pb-4" id="balance-evolution-container"></div>
+                        </div>
+                    </div>
+                    <div class="mt-6 bg-gray-50 dark:bg-gray-900/50 p-4 rounded-lg border border-gray-100 dark:border-gray-700">
+                        <h4 class="text-xs font-semibold text-gray-500 uppercase mb-3 dark:text-gray-400">Resumo da Variação</h4>
+                        <div id="compare-flow-badges" class="grid grid-cols-3 gap-4"></div>
+                    </div>
+                </div>
+            </section>
+
+            <section id="view-goals" class="hidden fade-in">
+                <div class="bg-white p-6 rounded-xl card-shadow dark:bg-gray-800 transition-theme mb-6">
+                    <div class="flex justify-between items-center mb-6"><h3 class="font-bold text-gray-800 dark:text-white text-lg"><i class="fa-solid fa-bullseye text-blue-500 mr-2"></i> Metas & Saúde Financeira</h3></div>
+                    <div class="bg-gray-50 dark:bg-gray-900/50 border border-gray-100 dark:border-gray-700 rounded-xl p-5">
+                        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-4">
+                            <div><h4 class="text-sm font-bold text-gray-800 dark:text-white flex items-center gap-2"><i class="fa-solid fa-shield-heart text-rose-500"></i> Cobertura de Emergência (Runway)</h4><p class="text-xs text-gray-500 dark:text-gray-400 mt-1 max-w-md">Tempo estimado que você pode manter seu padrão de vida atual usando apenas o saldo acumulado, sem novas receitas.</p></div>
+                            <div class="text-right"><div class="text-2xl font-bold text-gray-800 dark:text-white val-privacy" id="goal-runway-val">...</div><div class="text-[10px] text-gray-400 uppercase tracking-wider font-semibold">Meses de Cobertura</div></div>
+                        </div>
+                        <div class="relative pt-6 pb-2">
+                            <div class="flex mb-2 items-center justify-between text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide"><span>Crítico</span><span>Saudável (6 Meses)</span><span>Excelente (12+)</span></div>
+                            <div class="overflow-hidden h-3 mb-2 text-xs flex rounded-full bg-gray-200 dark:bg-gray-700"><div id="goal-runway-bar" style="width:0%" class="shadow-none flex flex-col text-center whitespace-nowrap text-white justify-center bg-blue-500 transition-all duration-1000 ease-out"></div></div>
+                            <div class="flex justify-between text-[10px] text-gray-400"><span>0</span><span>6</span><span>12+</span></div>
+                        </div>
+                        <div class="grid grid-cols-2 gap-4 mt-4 border-t border-gray-200 dark:border-gray-700 pt-4">
+                            <div class="text-center"><div class="text-[10px] text-gray-400 uppercase tracking-wider mb-1">Saldo Total Acumulado</div><div class="text-sm font-bold text-gray-700 dark:text-gray-200 val-privacy" id="goal-total-balance">...</div></div>
+                            <div class="text-center border-l border-gray-200 dark:border-gray-700"><div class="text-[10px] text-gray-400 uppercase tracking-wider mb-1">Média de Gastos (6 Meses)</div><div class="text-sm font-bold text-gray-700 dark:text-gray-200 val-privacy" id="goal-avg-expense">...</div></div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section id="view-history" class="hidden fade-in">
+                <div class="bg-white p-6 rounded-xl card-shadow dark:bg-gray-800 transition-theme mb-6">
+                   <div class="flex justify-between items-center mb-6"><h3 class="font-bold text-gray-800 dark:text-white text-lg"><i class="fa-solid fa-clock-rotate-left text-gray-500 mr-2"></i> Histórico Santander</h3><span class="text-xs text-gray-400 font-normal">Base Unificada</span></div>
+                   <div class="overflow-x-auto"><table class="w-full text-left text-sm text-gray-500 dark:text-gray-400"><thead class="bg-gray-50 text-xs uppercase text-gray-700 dark:bg-gray-700 dark:text-gray-400"><tr><th class="px-3 py-2 rounded-l-lg">Data</th><th class="px-3 py-2">Tipo</th><th class="px-3 py-2">Categoria</th><th class="px-3 py-2">Descrição</th><th class="px-3 py-2 text-right rounded-r-lg">Valor</th></tr></thead><tbody id="history-table-body" class="divide-y divide-gray-100 dark:divide-gray-700"></tbody></table></div>
+                </div>
+            </section>
+
+            <section id="view-santander" class="hidden fade-in">
+                <div class="bg-white p-6 rounded-xl card-shadow dark:bg-gray-800 transition-theme mb-6">
+                   <div class="flex justify-between items-center mb-6"><h3 class="font-bold text-gray-800 dark:text-white text-lg flex items-center gap-2"><i class="fa-brands fa-cc-mastercard text-rose-600"></i> Fatura Santander</h3><span class="text-xs text-gray-400 font-normal" id="santander-status">Carregando...</span></div>
+                   <div class="overflow-x-auto"><table class="w-full text-left text-sm text-gray-500 dark:text-gray-400"><thead id="santander-table-head" class="bg-gray-50 text-xs uppercase text-gray-700 dark:bg-gray-700 dark:text-gray-400"></thead><tbody id="santander-table-body" class="divide-y divide-gray-100 dark:divide-gray-700"></tbody></table></div>
+                </div>
+            </section>
+
+            <section id="view-consolidated" class="hidden fade-in">
+                <div class="bg-white p-6 rounded-xl card-shadow dark:bg-gray-800 transition-theme mb-6">
+                   <div class="flex justify-between items-center mb-6"><h3 class="font-bold text-gray-800 dark:text-white text-lg flex items-center gap-2"><i class="fa-solid fa-layer-group text-indigo-600"></i> Extrato Consolidado</h3><span class="text-xs text-gray-400 font-normal">Conta + Cartões (Sem Duplicidade)</span></div>
+                   <div class="overflow-x-auto"><table class="w-full text-left text-sm text-gray-500 dark:text-gray-400"><thead class="bg-gray-50 text-xs uppercase text-gray-700 dark:bg-gray-700 dark:text-gray-400"><tr><th class="px-3 py-2 rounded-l-lg">Data</th><th class="px-3 py-2">Origem</th><th class="px-3 py-2">Descrição</th><th class="px-3 py-2">Categoria</th><th class="px-3 py-2 text-right rounded-r-lg">Valor</th></tr></thead><tbody id="consolidated-table-body" class="divide-y divide-gray-100 dark:divide-gray-700"></tbody></table></div>
+                </div>
+            </section>
+
+        </div>
+    </main>
+
+    <script src="js/core/Config.js"></script>
+    <script src="js/core/Utils.js"></script>
+    <script src="js/core/AppState.js"></script>
+    <script src="js/core/DataService.js"></script>
+    <script src="js/core/ChartManager.js"></script>
+    <script src="js/core/UI.js"></script>
+    
+    <script src="js/modules/Dashboard.js"></script>
+    <script src="js/modules/Report.js"></script>
+    <script src="js/modules/Compare.js"></script>
+    <script src="js/modules/Goals.js"></script>
+    <script src="js/modules/Tables.js"></script>
+    
+    <script src="js/main.js"></script>
+</body>
+</html>
