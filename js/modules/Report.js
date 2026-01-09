@@ -94,11 +94,24 @@ const Report = {
 
         ChartManager.renderReport(data);
         
-        const tInc = data.inc.reduce((a,b)=>a+b,0), tExp = data.exp.reduce((a,b)=>a+b,0), bal = tInc - tExp;
+        // CÁLCULOS ATUALIZADOS
+        const tInc = data.inc.reduce((a,b)=>a+b,0);
+        const tExp = data.exp.reduce((a,b)=>a+b,0);
+        
+        // Correção: O Saldo do Período agora reflete o SALDO FINAL (último ponto do gráfico/coluna Saldo)
+        // e não mais o fluxo líquido (Receita - Despesa) do período.
+        const finalBalance = data.bal.length > 0 ? data.bal[data.bal.length - 1] : 0;
+        
+        // Para o cálculo da taxa de poupança, mantemos o fluxo líquido (quanto sobrou do que entrou neste período)
+        const netFlow = tInc - tExp;
+
         Utils.DOM.updateText('total-gains', Utils.formatCurrency(tInc));
         Utils.DOM.updateText('total-costs', Utils.formatCurrency(tExp));
-        Utils.DOM.updateText('yearly-balance', Utils.formatCurrency(bal));
-        Utils.DOM.updateText('avg-savings', tInc>0 ? ((bal/tInc)*100).toFixed(1) + '%' : '0%');
+        
+        // Atualiza o visualizador com o Saldo Final Real
+        Utils.DOM.updateText('yearly-balance', Utils.formatCurrency(finalBalance));
+        
+        Utils.DOM.updateText('avg-savings', tInc>0 ? ((netFlow/tInc)*100).toFixed(1) + '%' : '0%');
 
         this.updateProjection(data);
     },
