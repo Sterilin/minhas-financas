@@ -1,19 +1,13 @@
 const Dashboard = {
     init() {
-        // 1. Desenha a estrutura visual (esqueleto) IMEDIATAMENTE, mesmo sem dados
         this.render();
-
-        // 2. Inscreve-se para atualizar os NÚMEROS quando os dados chegarem
         DataService.subscribe(() => this.render());
-        
-        // 3. Garante renderização ao trocar de abas
         document.addEventListener('tabChanged', (e) => {
             if (e.detail.tab === 'dashboard') this.render();
         });
     },
 
     getTemplate() {
-        // ... (Mantenha o HTML do template igual ao anterior, com os "..." nos valores)
         return `
             <div class="flex justify-between items-center mb-4">
                 <h2 class="text-lg font-semibold text-gray-700 dark:text-gray-200">Visão Geral (Mês Atual)</h2>
@@ -125,11 +119,18 @@ const Dashboard = {
                 <div class="flex justify-between items-center mb-4"><h3 class="font-semibold text-gray-700 dark:text-gray-200">Distribuição de Gastos</h3><button onclick="Handlers.switchTab('expenses')" class="text-xs text-blue-600 hover:text-blue-700 font-medium dark:text-blue-400 transition-colors">Ver detalhes</button></div>
                 <div id="block-chart-container" class="w-full h-64 flex gap-2 overflow-hidden rounded-lg val-privacy font-sans items-center justify-center text-xs text-gray-400">Carregando dados...</div>
             </div>
+
+            <div class="mt-6 bg-white p-5 rounded-xl card-shadow border border-gray-100 dark:bg-gray-800 dark:border-gray-700 transition-theme w-full">
+                <div class="mb-4">
+                     <h4 class="text-sm font-bold text-gray-700 dark:text-gray-200">Inflação Pessoal (Evolução de Categorias)</h4>
+                     <p class="text-[10px] text-gray-400">Histórico anual de gastos no Cartão por categoria</p>
+                 </div>
+                 <div class="w-full h-64 val-privacy"><canvas id="inflationChart"></canvas></div>
+            </div>
         `;
     },
 
     renderBlockChart(items) {
-        // ... (mantenha a lógica do renderBlockChart idêntica à anterior) ...
         const container = Utils.DOM.get('block-chart-container');
         if(!container) return;
         const total = items.reduce((a,b) => a+b.v, 0);
@@ -174,19 +175,14 @@ const Dashboard = {
     render() {
         const container = Utils.DOM.get('view-dashboard');
         
-        // CORREÇÃO CRÍTICA 1: Injeta o HTML se não houver filhos (esqueleto)
         if(container && container.children.length === 0) {
             container.innerHTML = this.getTemplate();
         }
 
-        // CORREÇÃO CRÍTICA 2: Verifica se os dados REALMENTE chegaram
-        // Se transactions estiver vazio, significa que ainda está carregando.
-        // Damos return para manter o "..." na tela e não quebrar o cálculo.
         if (!DataService.transactions || DataService.transactions.length === 0) {
             return;
         }
 
-        // Se chegou aqui, temos dados! Pode calcular e preencher.
         const { year, month } = DataService.getLatestPeriod();
         const stats = DataService.getDashboardStats(year, month);
         
@@ -215,7 +211,7 @@ const Dashboard = {
         const beDay = stats.metrics.breakEvenDay;
         Utils.DOM.updateText('dash-breakeven', beDay ? `Dia ${beDay}` : 'Não atingido');
 
-        // Pareto Render
+        // Pareto
         const pData = stats.metrics.pareto;
         const paretoEl = Utils.DOM.get('pareto-content');
         if (paretoEl) {
@@ -248,7 +244,7 @@ const Dashboard = {
             }
         }
 
-        // Heatmap Render
+        // Heatmap
         const hData = stats.metrics.heatmap;
         const heatEl = Utils.DOM.get('heatmap-container');
         if (heatEl) {
@@ -268,6 +264,12 @@ const Dashboard = {
 
         stats.categories.forEach(cat => { cat.c = UI.getCategoryColor(cat.k); });
         this.renderBlockChart(stats.categories);
+
+        // --- Renderização do Gráfico de Inflação (Novo Local) ---
+        // Usa o ano atual do contexto para exibir a inflação
+        const inflationData = DataService.getYearlyCategoryBreakdown(year);
+        // Garante que o ChartManager tenha acesso ao canvas que acabou de ser criado via innerHTML
+        setTimeout(() => ChartManager.renderInflation(year, inflationData), 0);
     }
 };
 
