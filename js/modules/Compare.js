@@ -2,14 +2,11 @@ const Compare = {
     init() {
         DataService.subscribe(() => {
             this.updateSelectors();
-            // Atraso leve para garantir que o DOM esteja pronto se a aba for carregada diretamente
-            setTimeout(() => this.initInflationSelector(), 500); 
         });
         
         document.addEventListener('tabChanged', (e) => {
             if (e.detail.tab === 'compare') {
                 this.updateSelectors();
-                this.initInflationSelector();
             }
         });
     },
@@ -22,7 +19,7 @@ const Compare = {
     updateSelectors() {
         const type = Utils.DOM.getValue('compare-type');
         const [yA, yB, pA, pB] = [Utils.DOM.get('comp-year-a'), Utils.DOM.get('comp-year-b'), Utils.DOM.get('comp-period-a'), Utils.DOM.get('comp-period-b')];
-        if(!yA) return; // Se elemento não existe na tela
+        if(!yA) return; 
         
         yA.innerHTML = yB.innerHTML = AppParams.years.map(y => `<option value="${y}">${y}</option>`).join('');
         const periods = type === 'monthly' ? AppParams.months.short : (type === 'quarterly' ? AppParams.quarters.short : []);
@@ -86,7 +83,6 @@ const Compare = {
         const [yA, pA] = [parseInt(Utils.DOM.getValue('comp-year-a')), parseInt(Utils.DOM.getValue('comp-period-a'))];
         const [yB, pB] = [parseInt(Utils.DOM.getValue('comp-year-b')), parseInt(Utils.DOM.getValue('comp-period-b'))];
         
-        // Auto-ajuste slider
         if((src === 'A' || src === 'B') && !AppState.isAutoSync && type !== 'yearly') {
             const f = type === 'monthly' ? 12 : 4;
             const diff = Math.abs((yA*f+pA) - (yB*f+pB));
@@ -118,7 +114,6 @@ const Compare = {
         }
         ChartManager.renderCompare([lA, lB], dA, dB);
         
-        // Geração de Badges e Barras
         const genBadge = (lbl, vA, vB, invertLogic) => {
             const d = vA - vB;
             const pct = vB === 0 ? (vA === 0 ? 0 : 100) : ((d / vB) * 100).toFixed(1);
@@ -146,23 +141,6 @@ const Compare = {
                     </div>`;
         };
         Utils.DOM.updateHTML('balance-evolution-container', genBar(dA.bal, 'Ref. (A)', '#3b82f6') + genBar(dB.bal, 'Comp. (B)', '#6366f1'));
-        
-        // Inflação
-        const selectedYearA = parseInt(Utils.DOM.getValue('comp-year-a'));
-        const inflationData = DataService.getYearlyCategoryBreakdown(selectedYearA);
-        ChartManager.renderInflation(selectedYearA, inflationData);
-    },
-
-    initInflationSelector() {
-        const cats = DataService.getAllCategories();
-        const sel = Utils.DOM.get('inflation-category-select');
-        if(!sel) return;
-        sel.innerHTML = cats.map(c => `<option value="${c}">${c}</option>`).join('');
-        if(cats.length > 0) sel.value = cats[0];
-    },
-
-    updateInflationChart() {
-        // Redundante, já tratado no runComparison
     }
 };
 
