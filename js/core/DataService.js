@@ -14,23 +14,18 @@ const DataService = {
         Utils.DOM.updateText('current-month-badge', 'Buscando dados...');
 
         try {
-            // Adiciona timestamp para evitar cache do navegador
             const ts = `&t=${Date.now()}`;
-            
-            // Promise.allSettled permite que se uma falhar, a outra ainda carregue
             const results = await Promise.allSettled([
                 this.fetchData(AppParams.urls.transactions + ts, 'CSV (Transações)'),
                 this.fetchData(AppParams.urls.santander + ts, 'TSV (Santander)')
             ]);
 
-            // Processa Transações Gerais
             if (results[0].status === 'fulfilled') {
                 this.parseCSV(results[0].value);
             } else {
                 console.error("❌ Erro Transações:", results[0].reason);
             }
 
-            // Processa Santander
             if (results[1].status === 'fulfilled') {
                 this.parseSantanderTSV(results[1].value);
             } else {
@@ -50,18 +45,12 @@ const DataService = {
         }
     },
 
-    // Wrapper genérico para fetch com tratamento de erro
     async fetchData(url, label) {
         console.log(`📡 Buscando ${label}...`);
         const res = await fetch(url);
         if (!res.ok) throw new Error(`HTTP Error: ${res.status}`);
         return await res.text();
     },
-
-    // --- MANTENHA O RESTANTE DO CÓDIGO EXATAMENTE IGUAL ABAIXO ---
-    // (Copie daqui para baixo os métodos: getConsolidatedTransactions, parseSantanderTSV, 
-    // parseCSV, buildCache, getMonthly, getLatestPeriod, etc... 
-    // do arquivo DataService.js que te passei anteriormente)
 
     getConsolidatedTransactions() {
         let accData = this.transactions.map(t => ({
@@ -83,7 +72,6 @@ const DataService = {
     },
 
     parseSantanderTSV(text) {
-        // ... (Mesmo código anterior) ...
         const rows = text.split('\n').map(r => r.trim()).filter(r => r);
         if (rows.length < 2) return;
         const rawHeaders = rows[0].split('\t').map(h => h.replace(/"/g, '').trim());
@@ -136,7 +124,6 @@ const DataService = {
     },
 
     parseCSV(text) {
-        // ... (Mesmo código anterior) ...
         const rows = text.split('\n').map(r => r.trim()).filter(r => r);
         if (rows.length < 2) return;
         const splitCSV = (str) => {
@@ -196,33 +183,60 @@ const DataService = {
     },
 
     buildCache() {
-        // ... (Mesmo código anterior) ...
+        // Inicializa o cache para cada ano
         this.monthlyDataCache = {};
+        AppParams.years.forEach(y => {
+            this.monthlyDataCache[y] = { 
+                income: new Array(12).fill(0), 
+                expenses: new Array(12).fill(0), 
+                balances: new Array(12).fill(0) 
+            };
+        });
+
+        // 1. Processamento de Saldo (Mantém Mês Civil para fidelidade com extrato bancário)
         const eomBalances = {};
+        // Ordena transações (descendente, conforme parseCSV)
+        // O loop original pegava o primeiro encontrado (o mais recente do mês), o que é correto para End of Month Balance
         for (const t of this.transactions) {
             const key = `${t.date.getFullYear()}-${t.date.getMonth()}`;
             if (eomBalances[key] === undefined) eomBalances[key] = t.balance;
         }
-        let runningBalance = this.transactions.length > 0 ? this.transactions[this.transactions.length - 1].balance : 0;
-        AppParams.years.forEach(y => {
-            const income = new Array(12).fill(0);
-            const expenses = new Array(12).fill(0);
-            const balances = new Array(12).fill(0);
-            const flowData = this.getConsolidatedTransactions();
-            const yearTrans = flowData.filter(t => t.date.getFullYear() === y);
-            
-            yearTrans.forEach(t => {
-                const m = t.date.getMonth();
+
+        // 2. Processamento de Fluxo (Receita/Despesa) com Regra de Data de Corte (16/M-1 a 15/M)
+        const flowData = this.getConsolidatedTransactions();
+        
+        flowData.forEach(t => {
+            const d = t.date.getDate();
+            let m = t.date.getMonth();
+            let y = t.date.getFullYear();
+
+            // Regra: Dia >= 16 conta para o próximo mês
+            if (d >= 16) {
+                m++;
+                if (m > 11) {
+                    m = 0;
+                    y++;
+                }
+            }
+
+            // Se o ano calculado (fiscal) existe no cache, acumula
+            if (this.monthlyDataCache[y]) {
                 const val = Math.abs(t.value);
-                if (t.type === 'income') income[m] += val;
-                else expenses[m] += val;
-            });
+                if (t.type === 'income') this.monthlyDataCache[y].income[m] += val;
+                else this.monthlyDataCache[y].expenses[m] += val;
+            }
+        });
+
+        // 3. Preenchimento final dos Saldos nos Arrays
+        // Define saldo inicial como o da transação mais antiga disponível
+        let runningBalance = this.transactions.length > 0 ? this.transactions[this.transactions.length - 1].balance : 0;
+        
+        AppParams.years.forEach(y => {
             for (let m = 0; m < 12; m++) {
                 const key = `${y}-${m}`;
                 if (eomBalances[key] !== undefined) runningBalance = eomBalances[key];
-                balances[m] = runningBalance;
+                this.monthlyDataCache[y].balances[m] = runningBalance;
             }
-            this.monthlyDataCache[y] = { income, expenses, balances };
         });
     },
 
@@ -238,7 +252,10 @@ const DataService = {
     },
 
     getDashboardStats(year, month) {
-        // ... (Mesmo código anterior) ...
+        // Cálculo Dashboard (Mantém visão Mês Civil para bater com extrato ou altera?)
+        // Para consistência, o Dashboard (Visão Geral) geralmente foca no mês civil atual.
+        // Vou manter a lógica original aqui para não confundir o usuário que olha o app do banco.
+        
         const accIncome = this.transactions.filter(t => t.type === 'income' && t.date.getMonth() === month && t.date.getFullYear() === year).reduce((a, b) => a + b.value, 0);
         const accExpense = this.transactions.filter(t => t.type === 'expense' && t.date.getMonth() === month && t.date.getFullYear() === year).reduce((a, b) => a + b.value, 0);
         const accBalance = accIncome - accExpense;
@@ -330,7 +347,6 @@ const DataService = {
     },
 
     getAggregated(year, isMonthly, indices) {
-        // ... (Mesmo código anterior) ...
         const d = this.getMonthly(year);
         if (!d) return { income: [], expenses: [], balances: [], labels: [] };
         let income = [], expenses = [], balances = [], labels = [];
@@ -356,7 +372,6 @@ const DataService = {
     },
 
     getCategoryHistory(category) {
-        // ... (Mesmo código anterior) ...
         const history = [];
         const { year, month } = this.getLatestPeriod();
         for (let i = 11; i >= 0; i--) {
@@ -369,7 +384,6 @@ const DataService = {
     },
     
     getYearlyCategoryBreakdown(year) {
-        // ... (Mesmo código anterior) ...
         const monthlyData = Array.from({length: 12}, () => ({}));
         const allCategories = new Set();
         this.santanderTransactions.forEach(t => {
@@ -384,14 +398,12 @@ const DataService = {
     },
 
     getAllCategories() {
-        // ... (Mesmo código anterior) ...
         const cats = new Set();
         this.santanderTransactions.forEach(t => { if(t.category) cats.add(t.category); });
         return Array.from(cats).sort();
     },
 
     getGoalsStats() {
-        // ... (Mesmo código anterior) ...
         const { year, month } = this.getLatestPeriod();
         const curData = this.getMonthly(year);
         let currentBalance = 0;
