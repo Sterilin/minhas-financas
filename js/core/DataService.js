@@ -1,5 +1,5 @@
 const DataService = {
-    // ... (Init, fetch, parsers e outros métodos mantidos iguais) ...
+    // ... (Propriedades e métodos anteriores mantidos: bradescoTransactions, init, fetch, parsers...)
     bradescoTransactions: [], 
     santanderAccountTransactions: [], 
     santanderCardTransactions: [],
@@ -145,7 +145,6 @@ const DataService = {
     },
 
     buildCache() {
-        // ... (Mantido igual: Cache, FiscalPeriod, Processamento) ...
         this.monthlyDataCache = {};
         AppParams.years.forEach(y => {
             this.monthlyDataCache[y] = { 
@@ -222,7 +221,6 @@ const DataService = {
     getMonthly(year) { return this.monthlyDataCache[year]; },
     getLatestPeriod() { const now = new Date(); return { year: now.getFullYear(), month: now.getMonth() }; },
 
-    // Métodos Aggregated e Consolidated mantidos...
     getAggregated(year, isMonthly, indices, sourceFilter = 'all') {
         const d = this.getMonthly(year);
         if (!d) return { income: [], expenses: [], balances: [], balancesSantander: [], labels: [] };
@@ -257,13 +255,12 @@ const DataService = {
         return [...brad, ...santAcc, ...santCard].sort((a,b) => b.date - a.date);
     },
     
-    // --- LÓGICA DO DASHBOARD ---
+    // --- DASHBOARD: Lógica mantida da versão anterior ---
     getDashboardStats(year, month) {
         let balBrad = 0, balSant = 0;
         if (this.bradescoTransactions.length > 0) balBrad = this.bradescoTransactions[0].balance;
         if (this.santanderAccountTransactions.length > 0) balSant = this.santanderAccountTransactions[0].balance;
         
-        // Datas
         let startM = month - 1; let startY = year;
         if (startM < 0) { startM = 11; startY--; }
         const currentStartDate = new Date(startY, startM, 16);
@@ -272,25 +269,18 @@ const DataService = {
 
         let invoiceTotal = 0; let paretoTotal = 0; let paretoCategories = {}; 
         const dailyExpenses = new Array(31).fill(0); 
-        
-        // NOVO: Ritmo Semanal (Mês Civil Atual)
         const weeklyStats = [0, 0, 0, 0];
 
-        // Processamento de Transações
         const processStats = (list) => {
             if(!list) return;
             list.forEach(t => {
                 if (t.type !== 'expense' || AppParams.ignorePatterns.some(p => t.description.toLowerCase().includes(p))) return;
                 const val = Math.abs(t.value);
 
-                // Fatura
                 if (t.date >= currentStartDate && t.date <= endDate) {
-                    if(t.source === 'santander_card') {
-                        invoiceTotal += val;
-                    }
+                    if(t.source === 'santander_card') invoiceTotal += val;
                 }
 
-                // Padrões (3 Meses)
                 if (t.date >= patternStartDate && t.date <= endDate) {
                     if(t.source === 'santander_card') {
                         paretoTotal += val;
@@ -301,8 +291,6 @@ const DataService = {
                     }
                 }
 
-                // Ritmo Semanal (Mês Civil para controle de Fluxo)
-                // Considera TUDO (Contas + Cartão) no mês atual
                 if (t.date.getMonth() === month && t.date.getFullYear() === year) {
                     const d = t.date.getDate();
                     if (d <= 7) weeklyStats[0] += val;
@@ -317,7 +305,6 @@ const DataService = {
         processStats(this.bradescoTransactions);
         processStats(this.santanderAccountTransactions);
 
-        // Médias
         let sumIncome = 0; let sumFixed = 0; let sumProjBalance = 0;
         const fixedCats = ['aluguel', 'luz', 'internet', 'streaming', 'sem parar', 'transporte'];
         for (let i = 1; i <= 3; i++) {
@@ -328,8 +315,6 @@ const DataService = {
                 const inc = d.income[m]; sumIncome += inc;
                 const exp = d.expenses[m]; sumProjBalance += (inc - exp);
                 
-                // Estimativa rápida de fixo pelo cache (assumindo proporção ou varredura)
-                // Mantendo a varredura para precisão
                 let mFixed = 0;
                 const checkFixed = (list) => {
                     list.forEach(t => {
@@ -373,34 +358,88 @@ const DataService = {
                 disposableRate: disposableRate, 
                 pareto: { topCats: paretoCats, totalPareto: paretoSum, totalExp: paretoTotal },
                 heatmap: dailyExpenses,
-                weeklyPace: weeklyStats // [W1, W2, W3, W4]
+                weeklyPace: weeklyStats
             },
             categories: Object.entries(paretoCategories).map(([k, v]) => ({ k, v, c: AppParams.colors.categories[k] || 'bg-gray-400' })).sort((a, b) => b.v - a.v)
         };
     },
     
-    // Auxiliares mantidos
     getAllCategories() {
         const cats = new Set();
         if(this.bradescoTransactions) this.bradescoTransactions.forEach(t => cats.add(t.category));
         if(this.santanderCardTransactions) this.santanderCardTransactions.forEach(t => cats.add(t.category));
         return Array.from(cats).sort();
     },
-    getYearlyCategoryBreakdown(year) {
-        const data = Array.from({length: 12}, () => ({}));
-        if(this.santanderCardTransactions) {
-            this.santanderCardTransactions.forEach(t => {
-                if (t.date.getFullYear() === year && t.type === 'expense') {
-                    if (!AppParams.ignorePatterns.some(p => t.description.toLowerCase().includes(p))) {
-                        const m = t.date.getMonth();
-                        const cat = t.category || 'Outros';
-                        data[m][cat] = (data[m][cat] || 0) + Math.abs(t.value);
-                    }
-                }
-            });
+    
+    // --- NOVO MÉTODO PARA ÚLTIMAS 12 FATURAS FECHADAS ---
+    getLast12ClosedInvoicesBreakdown() {
+        const { year, month } = this.getLatestPeriod();
+        
+        // Mês atual é Aberto. Começamos do mês anterior (Fechado).
+        let currentM = month - 1;
+        let currentY = year;
+        
+        if (currentM < 0) { currentM = 11; currentY--; }
+
+        const labels = [];
+        const data = [];
+        
+        // Loop reverso: do mês fechado mais recente (i=0) até 11 meses atrás (i=11)
+        // Mas o gráfico deve mostrar cronologicamente (Antigo -> Novo).
+        // Então calculamos os índices mas inserimos no array na ordem correta.
+        
+        // Vamos calcular os 12 meses alvo primeiro
+        const targetMonths = [];
+        for (let i = 11; i >= 0; i--) {
+            let m = currentM - i;
+            let y = currentY;
+            // Ajuste para meses negativos (anos anteriores)
+            const offset = Math.floor(m / 12);
+            m = ((m % 12) + 12) % 12; // Modulo positivo seguro
+            y += offset;
+            
+            targetMonths.push({ m, y });
         }
-        return { months: AppParams.months.short, categories: [], data: data };
+
+        targetMonths.forEach(target => {
+            const { m, y } = target;
+            
+            // Cria Label (Ex: Jan/25)
+            labels.push(`${AppParams.months.short[m]}/${y.toString().substr(2)}`);
+            
+            // Define janela da fatura: 16 de (M-1) a 15 de (M)
+            let startM = m - 1;
+            let startY = y;
+            if (startM < 0) { startM = 11; startY--; }
+            
+            const startD = new Date(startY, startM, 16);
+            const endD = new Date(y, m, 15, 23, 59, 59);
+            
+            const monthData = {};
+            
+            if (this.santanderCardTransactions) {
+                this.santanderCardTransactions.forEach(t => {
+                    // Filtra apenas Despesas Reais
+                    if (t.type === 'expense' && !AppParams.ignorePatterns.some(p => t.description.toLowerCase().includes(p))) {
+                        // Verifica se está dentro da janela da fatura
+                        if (t.date >= startD && t.date <= endD) {
+                            const cat = t.category || 'Outros';
+                            monthData[cat] = (monthData[cat] || 0) + Math.abs(t.value);
+                        }
+                    }
+                });
+            }
+            data.push(monthData);
+        });
+        
+        return { months: labels, categories: [], data: data };
     },
+
+    getYearlyCategoryBreakdown(year) {
+        // Mantido para compatibilidade, mas o Dashboard agora usará o método acima
+        return this.getLast12ClosedInvoicesBreakdown();
+    },
+
     getGoalsStats() { return { currentBalance: 0, avgExp: 0, runway: 0 }; }
 };
 window.DataService = DataService;
