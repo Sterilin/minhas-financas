@@ -20,8 +20,6 @@ const AppParams = {
         },
         chart: { lightGrid: '#f3f4f6', darkGrid: '#374151', lightText: '#6b7280', darkText: '#9ca3af' }
     },
-    // Termos que identificam transferências internas ou pagamentos de fatura
-    // Estes itens afetarão o SALDO, mas serão ignorados nos relatórios de Receita/Despesa para não duplicar.
     ignorePatterns: [
         'pagamento fatura', 
         'pagto fatura',
@@ -35,14 +33,14 @@ const AppParams = {
     ],
     years: [2024, 2025, 2026],
     urls: {
-        // CSV genérico mantido por compatibilidade, mas o foco agora é Bradesco TSV
-        transactions: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQ3... (Seu Link Antigo Opcional)', 
-        
-        // Nova Fonte Bradesco TSV
+        // Fonte 1: Conta Bradesco (Hub)
         bradesco: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTfJcPWRMKT9iyUjGUs7EnCdAaqO7Z1TpHqWMT0nLSrl6TUbH43h5pKwnLHfieisnWUaHgdkYx3MAKs/pub?gid=1529188760&single=true&output=tsv',
         
-        // Fonte Santander TSV (Cartão/Conta)
-        santander: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQ... (Seu Link Santander Atual)' 
+        // Fonte 2: Conta Santander (Movimentação Corrente)
+        santanderAccount: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTfJcPWRMKT9iyUjGUs7EnCdAaqO7Z1TpHqWMT0nLSrl6TUbH43h5pKwnLHfieisnWUaHgdkYx3MAKs/pub?gid=0&single=true&output=tsv',
+        
+        // Fonte 3: Cartão Santander (Fatura)
+        santanderCard: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTfJcPWRMKT9iyUjGUs7EnCdAaqO7Z1TpHqWMT0nLSrl6TUbH43h5pKwnLHfieisnWUaHgdkYx3MAKs/pub?gid=894667076&single=true&output=tsv'
     }
 };
 window.AppParams = AppParams;
