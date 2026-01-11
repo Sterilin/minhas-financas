@@ -63,7 +63,7 @@ const Dashboard = {
                         <div><p class="text-sm text-gray-500 font-medium uppercase dark:text-gray-400">Saldo em Conta</p><h3 class="text-2xl font-bold text-gray-800 mt-1 dark:text-white val-privacy" id="dash-account-balance">...</h3><p class="text-xs text-teal-600 font-semibold mt-1 dark:text-teal-400">Extrato Bancário</p></div>
                         <div class="bg-teal-100 text-teal-600 p-2 rounded-lg dark:bg-teal-900/30 dark:text-teal-400"><i class="fa-solid fa-building-columns"></i></div>
                     </div>
-                    <button class="w-full mt-3 py-1.5 text-xs font-medium text-teal-600 border border-teal-200 rounded hover:bg-teal-50 transition dark:text-teal-400 dark:border-teal-800 dark:hover:bg-teal-900/30" onclick="Handlers.switchTab('history')">Ver Extrato</button>
+                    <button class="w-full mt-3 py-1.5 text-xs font-medium text-teal-600 border border-teal-200 rounded hover:bg-teal-50 transition dark:text-teal-400 dark:border-teal-800 dark:hover:bg-teal-900/30" onclick="Handlers.switchTab('bradesco')">Ver Extrato</button>
                 </div>
             </div>
 
@@ -119,7 +119,7 @@ const Dashboard = {
                 <div class="flex justify-between items-center mb-4"><h3 class="font-semibold text-gray-700 dark:text-gray-200">Distribuição de Gastos</h3><button onclick="Handlers.switchTab('expenses')" class="text-xs text-blue-600 hover:text-blue-700 font-medium dark:text-blue-400 transition-colors">Ver detalhes</button></div>
                 <div id="block-chart-container" class="w-full h-64 flex gap-2 overflow-hidden rounded-lg val-privacy font-sans items-center justify-center text-xs text-gray-400">Carregando dados...</div>
             </div>
-
+            
             <div class="mt-6 bg-white p-5 rounded-xl card-shadow border border-gray-100 dark:bg-gray-800 dark:border-gray-700 transition-theme w-full">
                 <div class="mb-4">
                      <h4 class="text-sm font-bold text-gray-700 dark:text-gray-200">Inflação Pessoal (Evolução de Categorias)</h4>
@@ -179,7 +179,9 @@ const Dashboard = {
             container.innerHTML = this.getTemplate();
         }
 
-        if (!DataService.transactions || DataService.transactions.length === 0) {
+        // --- Correção: Checa se há dados no Bradesco ou Santander ---
+        if ((!DataService.bradescoTransactions || DataService.bradescoTransactions.length === 0) &&
+            (!DataService.santanderTransactions || DataService.santanderTransactions.length === 0)) {
             return;
         }
 
@@ -211,7 +213,6 @@ const Dashboard = {
         const beDay = stats.metrics.breakEvenDay;
         Utils.DOM.updateText('dash-breakeven', beDay ? `Dia ${beDay}` : 'Não atingido');
 
-        // Pareto
         const pData = stats.metrics.pareto;
         const paretoEl = Utils.DOM.get('pareto-content');
         if (paretoEl) {
@@ -244,7 +245,6 @@ const Dashboard = {
             }
         }
 
-        // Heatmap
         const hData = stats.metrics.heatmap;
         const heatEl = Utils.DOM.get('heatmap-container');
         if (heatEl) {
@@ -265,10 +265,7 @@ const Dashboard = {
         stats.categories.forEach(cat => { cat.c = UI.getCategoryColor(cat.k); });
         this.renderBlockChart(stats.categories);
 
-        // --- Renderização do Gráfico de Inflação (Novo Local) ---
-        // Usa o ano atual do contexto para exibir a inflação
         const inflationData = DataService.getYearlyCategoryBreakdown(year);
-        // Garante que o ChartManager tenha acesso ao canvas que acabou de ser criado via innerHTML
         setTimeout(() => ChartManager.renderInflation(year, inflationData), 0);
     }
 };
