@@ -59,23 +59,30 @@ const Goals = {
 
         const stats = DataService.getGoalsStats();
 
-        // 1. Atualiza Runway
+        // 1. Runway
         Utils.DOM.updateText('goal-total-balance', Utils.formatCurrency(stats.currentBalance));
         Utils.DOM.updateText('goal-avg-expense', Utils.formatCurrency(stats.avgExp));
         Utils.DOM.updateText('goal-runway-val', stats.runway);
         const runwayBar = Utils.DOM.get('goal-runway-bar');
         if(runwayBar) {
-            const pct = Math.min((stats.runway / 12) * 100, 100);
+            const pct = Math.min((parseFloat(stats.runway) / 12) * 100, 100);
             runwayBar.style.width = `${pct}%`;
             runwayBar.className = `shadow-none flex flex-col text-center whitespace-nowrap text-white justify-center transition-all duration-1000 ease-out ${stats.runway < 3 ? 'bg-rose-500' : (stats.runway < 6 ? 'bg-amber-500' : 'bg-emerald-500')}`;
         }
 
-        // 2. Renderiza Cards de Metas (Layout Horizontal)
+        // 2. Grid de Metas
         const grid = Utils.DOM.get('goals-grid');
-        if(grid && stats.goals && stats.goals.length > 0) {
-            grid.innerHTML = stats.goals.map(g => this.createGoalCard(g)).join('');
-        } else if (grid) {
-            grid.innerHTML = '<div class="text-center py-8 text-gray-400 text-xs border border-dashed border-gray-300 rounded-lg">Nenhuma meta encontrada na planilha.</div>';
+        if(grid) {
+            if (stats.goals && stats.goals.length > 0) {
+                grid.innerHTML = stats.goals.map(g => this.createGoalCard(g)).join('');
+            } else {
+                // Diagnóstico para o usuário
+                grid.innerHTML = `
+                <div class="text-center py-8 text-gray-400 text-xs border border-dashed border-gray-300 rounded-lg bg-gray-50 dark:bg-gray-800/50">
+                    <p class="font-bold mb-1">Nenhuma meta encontrada</p>
+                    <p>Verifique se a planilha de metas está preenchida corretamente.</p>
+                </div>`;
+            }
         }
     },
 
@@ -89,8 +96,7 @@ const Goals = {
             mediaHtml = `<div class="w-full h-full flex items-center justify-center bg-gray-100 dark:bg-gray-700 text-gray-400 text-4xl"><i class="${iconClass}"></i></div>`;
         }
 
-        // Lógica de Datas (Estimativa)
-        // Calcula o tempo total necessário (Total / Aporte) e subtrai o tempo restante para achar o início
+        // Lógica de Datas (Estimativa: Data Hoje + Meses Restantes)
         const totalMonthsNeeded = goal.monthly > 0 ? Math.ceil(goal.total / goal.monthly) : 0;
         const monthsElapsed = totalMonthsNeeded - goal.monthsLeft;
         
@@ -119,25 +125,21 @@ const Goals = {
                 </div>
 
                 <div class="grid grid-cols-2 sm:grid-cols-3 gap-y-4 gap-x-2">
-                    
                     <div>
                         <p class="text-[10px] text-gray-500 dark:text-gray-400 mb-0.5">Valor total</p>
                         <p class="text-sm font-bold text-emerald-600 dark:text-emerald-400 val-privacy">${Utils.formatCurrency(goal.total)}</p>
-                        
                         <p class="text-[10px] text-gray-500 dark:text-gray-400 mt-2 mb-0.5">Valor já arrecadado</p>
                         <p class="text-sm font-bold text-emerald-600 dark:text-emerald-400 val-privacy">${Utils.formatCurrency(goal.current)}</p>
                     </div>
-
                     <div>
                         <p class="text-[10px] text-gray-500 dark:text-gray-400 mb-0.5">Valor gasto</p>
-                        <p class="text-sm font-bold text-rose-600 dark:text-rose-400 val-privacy">R$ 0,00</p> <p class="text-[10px] text-gray-500 dark:text-gray-400 mt-2 mb-0.5">Saldo em conta</p>
+                        <p class="text-sm font-bold text-rose-600 dark:text-rose-400 val-privacy">R$ 0,00</p>
+                        <p class="text-[10px] text-gray-500 dark:text-gray-400 mt-2 mb-0.5">Saldo em conta</p>
                         <p class="text-sm font-bold text-emerald-600 dark:text-emerald-400 val-privacy">${Utils.formatCurrency(goal.current)}</p>
                     </div>
-
                     <div class="sm:text-right">
                         <p class="text-[10px] text-gray-500 dark:text-gray-400 mb-0.5">Parcelas restantes</p>
                         <p class="text-sm font-bold text-gray-800 dark:text-white">${goal.monthsLeft}</p>
-                        
                         <div class="mt-3">
                             <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5">
                                 <div class="bg-teal-400 h-2.5 rounded-full transition-all duration-1000" style="width: ${Math.min(goal.percent, 100)}%"></div>
