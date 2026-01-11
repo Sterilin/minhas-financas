@@ -1,5 +1,5 @@
 const DataService = {
-    bradescoTransactions: [], // Nova lista específica
+    bradescoTransactions: [],
     santanderTransactions: [], 
     monthlyDataCache: {},
     
@@ -13,19 +13,20 @@ const DataService = {
 
         try {
             const ts = `&t=${Date.now()}`;
-            // Agora buscamos Bradesco explicitamente
+            
             const results = await Promise.allSettled([
                 this.fetchData(AppParams.urls.bradesco + ts, 'Bradesco (TSV)'),
                 this.fetchData(AppParams.urls.santander + ts, 'Santander (TSV)')
             ]);
 
-            if (results[0].status === 'fulfilled') {
+            // Lógica de processamento mantida...
+            if (results[0].status === 'fulfilled' && results[0].value) {
                 this.parseBradescoTSV(results[0].value);
             } else {
                 console.error("❌ Erro Bradesco:", results[0].reason);
             }
 
-            if (results[1].status === 'fulfilled') {
+            if (results[1].status === 'fulfilled' && results[1].value) {
                 this.parseSantanderTSV(results[1].value);
             } else {
                 console.error("❌ Erro Santander:", results[1].reason);
@@ -43,21 +44,41 @@ const DataService = {
         }
     },
 
+    // --- CORREÇÃO DO BUG DE CORS AQUI ---
     async fetchData(url, label) {
-        if(!url || url.includes('...')) return ""; // Ignora URLs placeholder
+        if(!url || url.includes('...')) return "";
         console.log(`📡 Buscando ${label}...`);
-        const res = await fetch(url);
-        if (!res.ok) throw new Error(`HTTP Error: ${res.status}`);
-        return await res.text();
+        
+        try {
+            // TENTATIVA 1: Acesso Direto
+            const res = await fetch(url);
+            if (res.ok) return await res.text();
+            throw new Error(`Status Direto: ${res.status}`);
+        } catch (directError) {
+            console.warn(`⚠️ Acesso direto falhou para ${label} (${directError.message}). Tentando via Proxy...`);
+            
+            try {
+                // TENTATIVA 2: Via Proxy (Bypass CORS)
+                // Usamos 'api.allorigins.win' que repassa a requisição e adiciona os headers corretos
+                const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`;
+                const resProxy = await fetch(proxyUrl);
+                
+                if (!resProxy.ok) throw new Error(`Status Proxy: ${resProxy.status}`);
+                return await resProxy.text();
+                
+            } catch (proxyError) {
+                console.error(`☠️ Falha total para ${label}:`, proxyError);
+                throw proxyError;
+            }
+        }
     },
 
-    // --- PARSERS ---
+    // --- PARSERS (Mantidos idênticos ao passo anterior) ---
 
     parseBradescoTSV(text) {
         const rows = text.split('\n').map(r => r.trim()).filter(r => r);
         if (rows.length < 2) return;
         
-        // Detectar colunas dinamicamente
         const headers = rows[0].toLowerCase().split('\t');
         const idx = {
             date: headers.findIndex(h => h.includes('data')),
@@ -71,7 +92,6 @@ const DataService = {
             const cols = row.split('\t');
             if(cols.length < 3) return null;
 
-            // Tratamento de Data
             let date = new Date();
             const dStr = cols[idx.date];
             if(dStr && dStr.match(/^\d{2}\/\d{2}\/\d{2,4}/)) {
@@ -79,38 +99,27 @@ const DataService = {
                 date = new Date(y.length===2 ? '20'+y : y, m-1, d);
             }
 
-            // Tratamento de Valor (Bradesco usa pontuação BR: 1.000,00)
             const valRaw = idx.val > -1 ? cols[idx.val] : '0';
             const val = Utils.parseMoney(valRaw);
-            
-            // Tratamento de Saldo
             const balRaw = idx.bal > -1 ? cols[idx.bal] : '0';
             const bal = Utils.parseMoney(balRaw);
-
-            // Determina Categoria baseada na descrição (básico)
             const desc = (idx.desc > -1 ? cols[idx.desc] : '').replace(/"/g, '');
+            
             let cat = 'Outros';
             if(val > 0) cat = 'Receita';
             else if(desc.toLowerCase().includes('pix')) cat = 'Pix';
             
             return {
-                date: date,
-                description: desc,
-                value: val, // Positivo = Entrada, Negativo = Saída
-                balance: bal,
-                category: cat,
-                source: 'bradesco',
-                type: val >= 0 ? 'income' : 'expense'
+                date: date, description: desc, value: val, balance: bal,
+                category: cat, source: 'bradesco', type: val >= 0 ? 'income' : 'expense'
             };
         }).filter(t => t);
         
-        // Ordena por data (mais recente primeiro)
         this.bradescoTransactions.sort((a,b) => b.date - a.date);
         this.updateYearsFromData(this.bradescoTransactions);
     },
 
     parseSantanderTSV(text) {
-        // Lógica mantida, mas ajustada para garantir consistência
         const rows = text.split('\n').map(r => r.trim()).filter(r => r);
         if (rows.length < 2) return;
         const headers = rows[0].toLowerCase().split('\t');
@@ -125,7 +134,6 @@ const DataService = {
         this.santanderTransactions = rows.slice(1).map(row => {
             const cols = row.split('\t');
             let date = new Date();
-            // ... (Lógica de data mantida do seu arquivo anterior) ...
              if (idx.date > -1 && cols[idx.date]) {
                 const dStr = cols[idx.date];
                 if(dStr.match(/^\d{2}\/\d{2}\/\d{4}/)) {
@@ -133,17 +141,12 @@ const DataService = {
                     date = new Date(y, m-1, d);
                 }
             }
-
             const val = idx.val > -1 ? Utils.parseMoney(cols[idx.val]) : 0;
             const desc = idx.desc > -1 ? cols[idx.desc].replace(/"/g, '') : 'Santander';
             
             return {
-                date: date,
-                description: desc,
-                value: val, // No Santander (Cartão), valor positivo geralmente é gasto, negativo é pagto. Inverteremos na consolidação se necessário.
-                category: idx.cat > -1 ? cols[idx.cat] : 'Cartão',
-                source: 'santander',
-                // No extrato de cartão: Valores positivos são gastos. Valores negativos são pagamentos/estornos.
+                date: date, description: desc, value: val,
+                category: idx.cat > -1 ? cols[idx.cat] : 'Cartão', source: 'santander',
                 type: val > 0 ? 'expense' : 'income' 
             };
         }).filter(t => t && t.value !== 0);
@@ -157,14 +160,13 @@ const DataService = {
         if(years.size > 0) {
             const combined = new Set([...AppParams.years, ...years]);
             AppParams.years = Array.from(combined).sort();
-            // Inicializa seleções padrão se não existirem
             AppParams.years.forEach(y => {
                 if(!AppState.reportSelections[y]) AppState.reportSelections[y] = Array.from({length:12},(_,i)=>i);
             });
         }
     },
 
-    // --- CONSOLIDAÇÃO INTELIGENTE ---
+    // --- CONSOLIDAÇÃO INTELIGENTE (Mantida igual ao passo anterior) ---
 
     buildCache() {
         this.monthlyDataCache = {};
@@ -176,13 +178,11 @@ const DataService = {
             };
         });
 
-        // Helper para verificar se é transferência/pagamento de fatura
         const isIgnored = (desc) => {
             const d = desc.toLowerCase();
             return AppParams.ignorePatterns.some(pattern => d.includes(pattern));
         };
 
-        // Helper para calcular o Mês Fiscal (16 a 15)
         const getFiscalPeriod = (date) => {
             let m = date.getMonth();
             let y = date.getFullYear();
@@ -193,19 +193,15 @@ const DataService = {
             return { m, y };
         };
 
-        // 1. Processar Bradesco (HUB)
-        // Precisamos rastrear o saldo mês a mês para o gráfico de evolução
         const bradescoBalances = {}; 
         
         this.bradescoTransactions.forEach(t => {
-            // Salva saldo por data (para depois pegar o último do mês)
             const key = `${t.date.getFullYear()}-${t.date.getMonth()}`;
-            if (bradescoBalances[key] === undefined) bradescoBalances[key] = t.balance; // Pega o primeiro (que é o mais recente pois está ordenado desc)
+            if (bradescoBalances[key] === undefined) bradescoBalances[key] = t.balance;
 
             const { m, y } = getFiscalPeriod(t.date);
             
             if (this.monthlyDataCache[y]) {
-                // Se for transferência, NÃO soma em Receita/Despesa, mas o saldo já foi capturado acima
                 if (!isIgnored(t.description)) {
                     const val = Math.abs(t.value);
                     if (t.value > 0) {
@@ -219,19 +215,11 @@ const DataService = {
             }
         });
 
-        // 2. Processar Santander (Satélite + Cartão)
-        // Assumindo que o TSV do Santander é primariamente Fatura de Cartão
-        // Se houver saldo em conta, precisaríamos de uma lógica similar à do Bradesco para saldo.
-        // Por hora, vamos tratar como Cartão (Gastos).
-        
         this.santanderTransactions.forEach(t => {
             const { m, y } = getFiscalPeriod(t.date);
-            
             if (this.monthlyDataCache[y]) {
-                // No cartão, ignoramos pagamentos recebidos (pois saíram do Bradesco ou são estornos que abatem a despesa)
-                if (t.type === 'expense') { // Gasto no cartão
+                if (t.type === 'expense') { 
                     const val = Math.abs(t.value);
-                     // Se for um pagamento de fatura que apareceu no extrato do cartão como crédito, ignoramos
                     if (!isIgnored(t.description)) {
                         this.monthlyDataCache[y].expenses[m] += val;
                         this.monthlyDataCache[y].card.expenses[m] += val;
@@ -240,24 +228,15 @@ const DataService = {
             }
         });
 
-        // 3. Preenchimento Final dos Saldos (Bradesco + Santander estimado)
-        // Como o Santander TSV de cartão não tem "Saldo em Conta Corrente", 
-        // usaremos apenas o saldo do Bradesco como referência de liquidez, 
-        // ou você precisará fornecer um valor fixo/manual para o Santander se quiser somar.
-        // Lógica atual: Saldo Líquido Disponível = Saldo Bradesco.
-        
         let lastKnownBalance = 0;
-        // Tenta encontrar o saldo mais recente disponível
         if(this.bradescoTransactions.length > 0) lastKnownBalance = this.bradescoTransactions[0].balance;
 
         AppParams.years.forEach(y => {
             for (let m = 0; m < 12; m++) {
-                // Tenta achar o saldo do final do mês civil (snapshot)
                 const key = `${y}-${m}`;
                 if (bradescoBalances[key] !== undefined) {
                     lastKnownBalance = bradescoBalances[key];
                 }
-                // O saldo do gráfico será o saldo acumulado do Bradesco
                 this.monthlyDataCache[y].balances[m] = lastKnownBalance;
             }
         });
@@ -271,7 +250,6 @@ const DataService = {
     },
 
     getAggregated(year, isMonthly, indices, sourceFilter = 'all') {
-        // ... (Mantém a lógica visual do gráfico) ...
         const d = this.getMonthly(year);
         if (!d) return { income: [], expenses: [], balances: [], labels: [] };
         
@@ -305,7 +283,6 @@ const DataService = {
         return { income, expenses, balances, labels };
     },
 
-    // Retorna lista unificada para a tabela "Consolidado"
     getConsolidatedTransactions() {
         const bradesco = this.bradescoTransactions.map(t => ({...t, sourceLabel: 'Bradesco'}));
         const santander = this.santanderTransactions.map(t => ({
@@ -316,7 +293,6 @@ const DataService = {
         return [...bradesco, ...santander].sort((a,b) => b.date - a.date);
     },
     
-    // Métodos auxiliares mantidos para não quebrar outros módulos
     getAllCategories() {
         const cats = new Set();
         this.bradescoTransactions.forEach(t => cats.add(t.category));
@@ -326,7 +302,6 @@ const DataService = {
     
     getYearlyCategoryBreakdown(year) {
         const data = Array.from({length: 12}, () => ({}));
-        // Foca no cartão para inflação pessoal
         this.santanderTransactions.forEach(t => {
             if (t.date.getFullYear() === year && t.type === 'expense') {
                 const m = t.date.getMonth();
@@ -334,22 +309,17 @@ const DataService = {
                 data[m][cat] = (data[m][cat] || 0) + Math.abs(t.value);
             }
         });
-        return { months: AppParams.months.short, categories: [], data: data }; // Categories preenchido dinamicamente no chart
+        return { months: AppParams.months.short, categories: [], data: data };
     },
 
     getDashboardStats(year, month) {
-        // Dashboard simplificado usando o cache já calculado (que tem a regra 16/15 aplicada)
         const d = this.getMonthly(year);
         const m = month;
-        
-        // Recupera dados já processados
         const income = d ? d.income[m] : 0;
         const expense = d ? d.expenses[m] : 0;
         const balance = income - expense;
         const accBal = d ? d.balances[m] : 0;
         
-        // Cálculo de tendências e detalhes
-        // ... (Pode ser refinado depois, focando no básico agora)
         return {
             metrics: { 
                 income, expense, balance, 
@@ -366,7 +336,6 @@ const DataService = {
     },
     
     getGoalsStats() {
-        // Usa saldo atual do Bradesco
         const curBal = this.bradescoTransactions.length > 0 ? this.bradescoTransactions[0].balance : 0;
         return { currentBalance: curBal, avgExp: 0, runway: 0 };
     }
