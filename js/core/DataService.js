@@ -1,6 +1,6 @@
 const DataService = {
     bradescoTransactions: [], 
-    santanderAccountTransactions: [], 
+    santanderAccountTransactions: [],
     santanderCardTransactions: [],
     monthlyDataCache: {},
     
@@ -61,7 +61,7 @@ const DataService = {
         }
     },
 
-    // --- PARSERS (Mantidos iguais) ---
+    // --- PARSERS ---
     parseBankStatement(text, sourceLabel) {
         if (!text || typeof text !== 'string') return [];
         const rows = text.split('\n').map(r => r.trim()).filter(r => r);
@@ -166,8 +166,8 @@ const DataService = {
         AppParams.years.forEach(y => {
             this.monthlyDataCache[y] = { 
                 income: new Array(12).fill(0), expenses: new Array(12).fill(0), 
-                balances: new Array(12).fill(0), // CONJUNTO
-                balancesSantander: new Array(12).fill(0), // ESPECÍFICO SANTANDER
+                balances: new Array(12).fill(0), 
+                balancesSantander: new Array(12).fill(0),
                 acc: { income: new Array(12).fill(0), expenses: new Array(12).fill(0) },
                 card: { income: new Array(12).fill(0), expenses: new Array(12).fill(0) }
             };
@@ -187,6 +187,7 @@ const DataService = {
 
         const balances = { bradesco: {}, santander: {} };
 
+        // Processa Contas (Fluxo de Caixa Real)
         const processAccount = (list, bankKey) => {
             if (!list) return;
             list.forEach(t => {
@@ -212,6 +213,7 @@ const DataService = {
         processAccount(this.bradescoTransactions, 'bradesco');
         processAccount(this.santanderAccountTransactions, 'santander');
 
+        // Processa Cartão (Apenas soma em Despesas para Gráficos, não afeta Saldo Bancário aqui)
         if (this.santanderCardTransactions) {
             this.santanderCardTransactions.forEach(t => {
                 const { m, y } = getFiscalPeriod(t.date);
@@ -225,13 +227,11 @@ const DataService = {
             });
         }
 
-        // Saldos Iniciais (para preencher meses anteriores ao primeiro registro)
+        // Waterfall de Saldos
         let lastBrad = 0, lastSant = 0;
         
-        // Pega o saldo mais antigo disponível para iniciar o waterfall se necessário, 
-        // mas a lógica abaixo usa o snapshot do mês. Se não houver snapshot, mantém o anterior.
+        // Pega saldo mais recente disponível para fallback
         if(this.bradescoTransactions && this.bradescoTransactions.length) {
-            // Como a lista está ordenada DESC, o último elemento é o mais antigo
             lastBrad = this.bradescoTransactions[this.bradescoTransactions.length-1].balance;
         }
         if(this.santanderAccountTransactions && this.santanderAccountTransactions.length) {
@@ -244,10 +244,7 @@ const DataService = {
                 if (balances.bradesco[key] !== undefined) lastBrad = balances.bradesco[key];
                 if (balances.santander[key] !== undefined) lastSant = balances.santander[key];
                 
-                // Saldo Conjunto (Para Projeção e Dashboard)
                 this.monthlyDataCache[y].balances[m] = lastBrad + lastSant;
-                
-                // Saldo Exclusivo Santander (Para o Gráfico de Relatório)
                 this.monthlyDataCache[y].balancesSantander[m] = lastSant;
             }
         });
@@ -277,8 +274,8 @@ const DataService = {
             indices.forEach(i => {
                 income.push(srcInc[i]); 
                 expenses.push(srcExp[i]); 
-                balances.push(d.balances[i]); // CONJUNTO
-                balancesSantander.push(d.balancesSantander[i]); // SANTANDER
+                balances.push(d.balances[i]); 
+                balancesSantander.push(d.balancesSantander[i]); 
                 labels.push(AppParams.months.short[i]);
             });
         } else {
@@ -330,23 +327,69 @@ const DataService = {
 
     getDashboardStats(year, month) {
         const d = this.getMonthly(year);
-        const m = month;
-        const income = d ? d.income[m] : 0;
-        const expense = d ? d.expenses[m] : 0;
-        const balance = income - expense;
-        const accBal = d ? d.balances[m] : 0; // Mostra saldo Conjunto no Dashboard por padrão
         
+        // 1. Saldo Bancário REAL (Snapshot do Banco)
+        // Se temos dados do Bradesco/Santander, usamos o saldo mais recente disponível na lista
+        let currentAccountBalance = 0;
+        if (this.bradescoTransactions.length > 0) currentAccountBalance += this.bradescoTransactions[0].balance;
+        if (this.santanderAccountTransactions.length > 0) currentAccountBalance += this.santanderAccountTransactions[0].balance;
+
+        // 2. Fatura Aberta (Cálculo Dinâmico 16/M-1 a 15/M)
+        let invoiceTotal = 0;
+        let invoiceCategories = {};
+        
+        // Define janela da fatura
+        let startM = month - 1;
+        let startY = year;
+        if (startM < 0) { startM = 11; startY--; }
+        const startDate = new Date(startY, startM, 16);
+        const endDate = new Date(year, month, 15, 23, 59, 59);
+
+        // Soma gastos do cartão nesta janela
+        if (this.santanderCardTransactions) {
+            this.santanderCardTransactions.forEach(t => {
+                // Se está dentro da janela
+                if (t.date >= startDate && t.date <= endDate) {
+                    if (t.type === 'expense' && !AppParams.ignorePatterns.some(p => t.description.toLowerCase().includes(p))) {
+                        const val = Math.abs(t.value);
+                        invoiceTotal += val;
+                        // Acumula categoria para o Pareto
+                        const cat = t.category || 'Outros';
+                        invoiceCategories[cat] = (invoiceCategories[cat] || 0) + val;
+                    }
+                }
+            });
+        }
+
+        // 3. Métricas Gerais (Do cache consolidado)
+        // Isso pega Receita e Despesa total do mês (incluindo pix, etc)
+        const income = d ? d.income[month] : 0;
+        const expense = d ? d.expenses[month] : 0;
+        const balance = income - expense; // Fluxo de Caixa do mês (Entrou - Saiu)
+
+        // Pareto
+        const sortedCats = Object.entries(invoiceCategories).sort((a,b) => b[1] - a[1]);
+        let paretoSum = 0;
+        const paretoCats = [];
+        for(const [cat, val] of sortedCats) {
+            paretoCats.push({cat, val});
+            paretoSum += val;
+            if(invoiceTotal > 0 && (paretoSum / invoiceTotal) >= 0.8) break;
+        }
+
         return {
             metrics: { 
                 income, expense, balance, 
-                accountBalance: accBal,
-                fixedCost: 0, cardInvoice: d ? d.card.expenses[m] : 0,
-                discretionaryRatio: 0, breakEvenDay: 0,
-                pareto: { topCats: [], totalPareto: 0, totalExp: expense },
+                accountBalance: currentAccountBalance, // Saldo Real (Sem deduzir fatura aberta)
+                fixedCost: 0, 
+                cardInvoice: invoiceTotal, // Valor da fatura aberta
+                discretionaryRatio: 0, 
+                breakEvenDay: 0,
+                pareto: { topCats: paretoCats, totalPareto: paretoSum, totalExp: invoiceTotal },
                 heatmap: []
             },
             trends: { income: 0, expense: 0 },
-            categories: [],
+            categories: Object.entries(invoiceCategories).map(([k, v]) => ({ k, v, c: AppParams.colors.categories[k] || 'bg-gray-400' })).sort((a, b) => b.v - a.v),
             recent: this.getConsolidatedTransactions().slice(0, 5)
         };
     },
