@@ -1,5 +1,4 @@
 const DataService = {
-    // ... (Propriedades e métodos anteriores mantidos: bradescoTransactions, init, fetch, parsers...)
     bradescoTransactions: [], 
     santanderAccountTransactions: [], 
     santanderCardTransactions: [],
@@ -56,7 +55,7 @@ const DataService = {
         }
     },
 
-    // --- PARSERS MANTIDOS ---
+    // --- PARSERS ---
     parseBankStatement(text, sourceLabel) {
         if (!text || typeof text !== 'string') return [];
         const rows = text.split('\n').map(r => r.trim()).filter(r => r);
@@ -255,7 +254,6 @@ const DataService = {
         return [...brad, ...santAcc, ...santCard].sort((a,b) => b.date - a.date);
     },
     
-    // --- DASHBOARD: Lógica mantida da versão anterior ---
     getDashboardStats(year, month) {
         let balBrad = 0, balSant = 0;
         if (this.bradescoTransactions.length > 0) balBrad = this.bradescoTransactions[0].balance;
@@ -371,43 +369,31 @@ const DataService = {
         return Array.from(cats).sort();
     },
     
-    // --- NOVO MÉTODO PARA ÚLTIMAS 12 FATURAS FECHADAS ---
+    // --- CORREÇÃO: Preenchimento de 'categories' para o gráfico ---
     getLast12ClosedInvoicesBreakdown() {
         const { year, month } = this.getLatestPeriod();
-        
-        // Mês atual é Aberto. Começamos do mês anterior (Fechado).
         let currentM = month - 1;
         let currentY = year;
-        
         if (currentM < 0) { currentM = 11; currentY--; }
 
         const labels = [];
         const data = [];
-        
-        // Loop reverso: do mês fechado mais recente (i=0) até 11 meses atrás (i=11)
-        // Mas o gráfico deve mostrar cronologicamente (Antigo -> Novo).
-        // Então calculamos os índices mas inserimos no array na ordem correta.
-        
-        // Vamos calcular os 12 meses alvo primeiro
+        const allCategories = new Set(); // Coleta categorias
+
         const targetMonths = [];
         for (let i = 11; i >= 0; i--) {
             let m = currentM - i;
             let y = currentY;
-            // Ajuste para meses negativos (anos anteriores)
             const offset = Math.floor(m / 12);
-            m = ((m % 12) + 12) % 12; // Modulo positivo seguro
+            m = ((m % 12) + 12) % 12;
             y += offset;
-            
             targetMonths.push({ m, y });
         }
 
         targetMonths.forEach(target => {
             const { m, y } = target;
-            
-            // Cria Label (Ex: Jan/25)
             labels.push(`${AppParams.months.short[m]}/${y.toString().substr(2)}`);
             
-            // Define janela da fatura: 16 de (M-1) a 15 de (M)
             let startM = m - 1;
             let startY = y;
             if (startM < 0) { startM = 11; startY--; }
@@ -416,15 +402,13 @@ const DataService = {
             const endD = new Date(y, m, 15, 23, 59, 59);
             
             const monthData = {};
-            
             if (this.santanderCardTransactions) {
                 this.santanderCardTransactions.forEach(t => {
-                    // Filtra apenas Despesas Reais
                     if (t.type === 'expense' && !AppParams.ignorePatterns.some(p => t.description.toLowerCase().includes(p))) {
-                        // Verifica se está dentro da janela da fatura
                         if (t.date >= startD && t.date <= endD) {
                             const cat = t.category || 'Outros';
                             monthData[cat] = (monthData[cat] || 0) + Math.abs(t.value);
+                            allCategories.add(cat); // Registra categoria
                         }
                     }
                 });
@@ -432,11 +416,11 @@ const DataService = {
             data.push(monthData);
         });
         
-        return { months: labels, categories: [], data: data };
+        // Retorna o objeto com a lista de categorias preenchida
+        return { months: labels, categories: Array.from(allCategories).sort(), data: data };
     },
 
     getYearlyCategoryBreakdown(year) {
-        // Mantido para compatibilidade, mas o Dashboard agora usará o método acima
         return this.getLast12ClosedInvoicesBreakdown();
     },
 
