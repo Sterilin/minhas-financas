@@ -1,10 +1,59 @@
 const Report = {
     init() {
         DataService.subscribe(() => {
+            // Define o padrão para os últimos 12 meses ao carregar novos dados
+            this.setLast12Months();
+            
             this.renderYearToggles();
             this.renderMonthButtons();
             this.updateCharts();
         });
+    },
+
+    // --- Nova Lógica: Janela de 12 Meses ---
+    setLast12Months() {
+        const latest = DataService.getLatestPeriod(); // { year: 2025, month: 10 }
+        
+        // Reseta seleções
+        AppState.selectedYears = [];
+        AppState.reportSelections = {};
+        
+        // Loop para pegar os últimos 12 meses (0 a 11)
+        for (let i = 0; i < 12; i++) {
+            let y = latest.year;
+            let m = latest.month - i;
+
+            // Ajuste de virada de ano
+            if (m < 0) {
+                m += 12;
+                y -= 1;
+            }
+
+            // Adiciona o ano à lista se não existir
+            if (!AppState.selectedYears.includes(y)) {
+                AppState.selectedYears.push(y);
+            }
+
+            // Inicializa o array do ano se não existir
+            if (!AppState.reportSelections[y]) {
+                AppState.reportSelections[y] = [];
+            }
+
+            // Adiciona o mês
+            AppState.reportSelections[y].push(m);
+        }
+
+        // Ordenação para garantir consistência visual
+        AppState.selectedYears.sort((a, b) => a - b);
+        AppState.selectedYears.forEach(y => {
+            if (AppState.reportSelections[y]) {
+                AppState.reportSelections[y].sort((a, b) => a - b);
+            }
+        });
+
+        // Força a visualização para Mensal, pois 12 meses em Trimestral ficaria estranho se quebrado
+        const filterView = Utils.DOM.get('filter-view');
+        if(filterView) filterView.value = 'monthly';
     },
 
     // --- Renderização de Controles ---
@@ -15,15 +64,25 @@ const Report = {
         const allYears = AppParams.years;
         const isAllSelected = allYears.length > 0 && AppState.selectedYears.length === allYears.length;
         
-        const createBtn = (text, onClick, isActive) => {
+        const createBtn = (text, onClick, isActive, title) => {
             const btn = document.createElement('button');
             btn.className = `px-3 py-1.5 text-[10px] sm:text-xs rounded-full transition-all border font-medium ${isActive ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm' : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-100 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-600'}`;
             btn.textContent = text; 
             btn.onclick = onClick; 
+            if(title) btn.title = title;
             return btn;
         };
 
+        // Botão para resetar para 12 meses
+        c.appendChild(createBtn('12 Meses', () => { 
+            this.setLast12Months(); 
+            this.renderYearToggles(); 
+            this.renderMonthButtons(); 
+            this.updateCharts(); 
+        }, false, "Visualizar últimos 12 meses"));
+
         c.appendChild(createBtn('Todos', () => this.toggleAllYears(), isAllSelected));
+        
         AppParams.years.forEach(y => c.appendChild(createBtn(y, () => this.toggleReportYear(y), AppState.selectedYears.includes(y))));
     },
 
@@ -38,7 +97,9 @@ const Report = {
         AppState.selectedYears.forEach(y => {
             const div = document.createElement('div'); 
             div.className = 'flex flex-col gap-1 pb-2 border-b border-gray-100 dark:border-gray-700 last:border-0 last:pb-0';
-            if(AppState.selectedYears.length>1) div.innerHTML = `<span class="text-[10px] font-bold text-gray-400 uppercase">${y}</span>`;
+            
+            // Exibe o ano sempre que houver mais de um ano selecionado OU para clareza na visualização de 12 meses
+            div.innerHTML = `<span class="text-[10px] font-bold text-gray-400 uppercase">${y}</span>`;
             
             const grp = document.createElement('div'); grp.className = 'flex flex-wrap gap-2';
             const sel = AppState.reportSelections[y] || [];
@@ -59,16 +120,13 @@ const Report = {
         });
     },
 
-    // --- Lógica de Gráficos ---
+    // --- Lógica de Gráficos (Mantendo correções anteriores) ---
     updateCharts() {
         const viewType = Utils.DOM.getValue('filter-view');
         const sourceFilter = Utils.DOM.getValue('filter-source');
         const isMonthly = viewType === 'monthly';
         
-        // Estrutura para o gráfico visual (Fluxo de Caixa)
         const data = { labels: [], years: [], inc: [], exp: [], bal: [] };
-        
-        // Estrutura separada para a Projeção (Sempre Conjunta)
         const projectionData = { labels: [], years: [], bal: [] };
 
         let isCustom = false;
@@ -81,28 +139,27 @@ const Report = {
             const res = DataService.getAggregated(y, isMonthly, indices, sourceFilter);
             
             res.labels.forEach((l, i) => {
-                // Filtra zeros apenas para o visual
+                // Filtro visual de zeros
                 if (res.income[i] === 0 && res.expenses[i] === 0 && res.balances[i] === 0) return;
                 
-                // Dados para o Gráfico Fluxo de Caixa (Usa Santander apenas para a linha de saldo)
                 data.labels.push(l); data.years.push(y); 
                 data.inc.push(res.income[i]); 
                 data.exp.push(res.expenses[i]); 
-                data.bal.push(res.balancesSantander[i]); // <--- AQUI: Usa Saldo Santander Específico
+                // Fluxo de Caixa: Mostra apenas Santander
+                data.bal.push(res.balancesSantander[i]); 
 
-                // Dados para Projeção (Usa Saldo Conjunto)
+                // Projeção: Usa saldo Conjunto
                 projectionData.labels.push(l);
                 projectionData.years.push(y);
-                projectionData.bal.push(res.balances[i]); // <--- AQUI: Usa Saldo Conjunto
+                projectionData.bal.push(res.balances[i]); 
             });
         });
 
+        // Limite de visualização (scroll virtual) - Mantém 12 meses visíveis
         const maxVisible = 12;
-        // Slice para visualização
         if (data.labels.length > maxVisible) {
             const s = data.labels.length - maxVisible;
             ['labels', 'years', 'inc', 'exp', 'bal'].forEach(k => data[k] = data[k].slice(s));
-            // Sincroniza projectionData com a view visual (opcional, mas bom para consistência do eixo X)
             projectionData.labels = projectionData.labels.slice(s);
             projectionData.years = projectionData.years.slice(s);
             projectionData.bal = projectionData.bal.slice(s);
@@ -110,8 +167,7 @@ const Report = {
 
         let statusText = "";
         if (data.labels.length === 0) statusText = "Nenhum dado com valor no período selecionado";
-        else if (isCustom) statusText = "Exibindo combinação personalizada";
-        else if (data.labels.length > maxVisible) statusText = `*Exibindo os ${maxVisible} períodos mais recentes`;
+        else if (isCustom) statusText = "Exibindo combinação personalizada (Filtro Ativo)";
         else statusText = `Visualizando ${data.labels.length} ${isMonthly ? 'meses' : 'trimestres'}`;
         
         if(sourceFilter !== 'all') {
@@ -120,16 +176,11 @@ const Report = {
 
         Utils.DOM.updateText('chart-status-text', statusText);
 
-        // Renderiza Gráfico Principal (Saldo Santander)
         ChartManager.renderReport(data);
         
         const tInc = data.inc.reduce((a,b)=>a+b,0);
         const tExp = data.exp.reduce((a,b)=>a+b,0);
-        
-        // Card de Saldo do Período: Exibe o saldo conjunto ou Santander? 
-        // Se o gráfico mostra Santander, o card deve mostrar Santander para ser consistente.
         const finalBalance = data.bal.length > 0 ? data.bal[data.bal.length - 1] : 0;
-        
         const netFlow = tInc - tExp;
 
         Utils.DOM.updateText('total-gains', Utils.formatCurrency(tInc));
@@ -137,12 +188,10 @@ const Report = {
         Utils.DOM.updateText('yearly-balance', Utils.formatCurrency(finalBalance));
         Utils.DOM.updateText('avg-savings', tInc>0 ? ((netFlow/tInc)*100).toFixed(1) + '%' : '0%');
 
-        // Renderiza Projeção (Saldo Conjunto)
         this.updateProjection(projectionData);
     },
 
     updateProjection(histData) {
-        // histData.bal aqui contém o SALDO CONJUNTO
         const sliderVal = parseInt(Utils.DOM.getValue('projection-slider')) || 6;
         const viewType = Utils.DOM.getValue('filter-view');
         const lastVisibleVal = histData.bal.length > 0 ? histData.bal[histData.bal.length - 1] : 0;
@@ -153,7 +202,6 @@ const Report = {
         }
         const stdDev = Math.max(Math.abs(lastVisibleVal) * 0.1, 100);
         
-        // Estrutura para o ChartManager
         let pData = { 
             labels: [...histData.labels], 
             years: [...histData.years], 
@@ -243,6 +291,8 @@ const Report = {
     },
     handleViewChange() {
         const viewType = Utils.DOM.getValue('filter-view');
+        // Se trocar para mensal, podemos querer voltar para 12 meses? 
+        // Por padrão, seleciona tudo, mas o usuário pode clicar no botão "12 Meses" se quiser.
         const allIndices = viewType === 'monthly' ? Array.from({length:12},(_,i)=>i) : [0,1,2,3];
         AppParams.years.forEach(y => AppState.reportSelections[y] = [...allIndices]);
 
