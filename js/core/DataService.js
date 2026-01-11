@@ -1,6 +1,7 @@
 const DataService = {
-    bradescoTransactions: [],
-    santanderTransactions: [], 
+    bradescoTransactions: [], 
+    santanderAccountTransactions: [], // Nova lista: Conta Corrente
+    santanderCardTransactions: [],    // Nova lista: Cartão de Crédito
     monthlyDataCache: {},
     
     listeners: [],
@@ -8,32 +9,29 @@ const DataService = {
     notify() { this.listeners.forEach(fn => fn(this)); },
 
     async init() {
-        console.log("🚀 DataService: Iniciando busca Multi-Contas...");
+        console.log("🚀 DataService: Iniciando busca de 3 fontes...");
         Utils.DOM.updateText('current-month-badge', 'Sincronizando Bancos...');
 
         try {
             const ts = `&t=${Date.now()}`;
             
             const results = await Promise.allSettled([
-                this.fetchData(AppParams.urls.bradesco + ts, 'Bradesco (TSV)'),
-                this.fetchData(AppParams.urls.santander + ts, 'Santander (TSV)')
+                this.fetchData(AppParams.urls.bradesco + ts, 'Bradesco'),
+                this.fetchData(AppParams.urls.santanderAccount + ts, 'Conta Santander'),
+                this.fetchData(AppParams.urls.santanderCard + ts, 'Cartão Santander')
             ]);
 
-            // Lógica de processamento mantida...
-            if (results[0].status === 'fulfilled' && results[0].value) {
-                this.parseBradescoTSV(results[0].value);
-            } else {
-                console.error("❌ Erro Bradesco:", results[0].reason);
-            }
+            // 1. Bradesco
+            if (results[0].status === 'fulfilled') this.parseBradescoTSV(results[0].value);
+            
+            // 2. Conta Santander
+            if (results[1].status === 'fulfilled') this.parseSantanderAccountTSV(results[1].value);
 
-            if (results[1].status === 'fulfilled' && results[1].value) {
-                this.parseSantanderTSV(results[1].value);
-            } else {
-                console.error("❌ Erro Santander:", results[1].reason);
-            }
+            // 3. Cartão Santander
+            if (results[2].status === 'fulfilled') this.parseSantanderCardTSV(results[2].value);
 
             this.buildCache();
-            console.log("✅ DataService: Dados Consolidados. Notificando módulos.");
+            console.log("✅ DataService: Dados Consolidados.");
             this.notify(); 
             return true;
 
@@ -44,51 +42,37 @@ const DataService = {
         }
     },
 
-    // --- CORREÇÃO DO BUG DE CORS AQUI ---
     async fetchData(url, label) {
-        if(!url || url.includes('...')) return "";
-        console.log(`📡 Buscando ${label}...`);
-        
+        if(!url) return "";
         try {
-            // TENTATIVA 1: Acesso Direto
             const res = await fetch(url);
             if (res.ok) return await res.text();
-            throw new Error(`Status Direto: ${res.status}`);
-        } catch (directError) {
-            console.warn(`⚠️ Acesso direto falhou para ${label} (${directError.message}). Tentando via Proxy...`);
-            
-            try {
-                // TENTATIVA 2: Via Proxy (Bypass CORS)
-                // Usamos 'api.allorigins.win' que repassa a requisição e adiciona os headers corretos
-                const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`;
-                const resProxy = await fetch(proxyUrl);
-                
-                if (!resProxy.ok) throw new Error(`Status Proxy: ${resProxy.status}`);
-                return await resProxy.text();
-                
-            } catch (proxyError) {
-                console.error(`☠️ Falha total para ${label}:`, proxyError);
-                throw proxyError;
-            }
+            throw new Error(res.status);
+        } catch (e) {
+            console.warn(`Proxying ${label}...`);
+            const proxy = `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`;
+            const resP = await fetch(proxy);
+            if (!resP.ok) throw new Error(resP.status);
+            return await resP.text();
         }
     },
 
-    // --- PARSERS (Mantidos idênticos ao passo anterior) ---
+    // --- PARSERS ---
 
-    parseBradescoTSV(text) {
+    // Parser Genérico para Extratos Bancários (Bradesco/Santander Conta)
+    parseBankStatement(text, sourceLabel) {
         const rows = text.split('\n').map(r => r.trim()).filter(r => r);
-        if (rows.length < 2) return;
+        if (rows.length < 2) return [];
         
         const headers = rows[0].toLowerCase().split('\t');
         const idx = {
             date: headers.findIndex(h => h.includes('data')),
-            desc: headers.findIndex(h => h.includes('histórico') || h.includes('lançamento')),
+            desc: headers.findIndex(h => h.includes('histórico') || h.includes('lançamento') || h.includes('descrição')),
             val: headers.findIndex(h => h.includes('valor')),
-            bal: headers.findIndex(h => h.includes('saldo')),
-            doc: headers.findIndex(h => h.includes('docto'))
+            bal: headers.findIndex(h => h.includes('saldo'))
         };
 
-        this.bradescoTransactions = rows.slice(1).map(row => {
+        return rows.slice(1).map(row => {
             const cols = row.split('\t');
             if(cols.length < 3) return null;
 
@@ -99,10 +83,8 @@ const DataService = {
                 date = new Date(y.length===2 ? '20'+y : y, m-1, d);
             }
 
-            const valRaw = idx.val > -1 ? cols[idx.val] : '0';
-            const val = Utils.parseMoney(valRaw);
-            const balRaw = idx.bal > -1 ? cols[idx.bal] : '0';
-            const bal = Utils.parseMoney(balRaw);
+            const val = idx.val > -1 ? Utils.parseMoney(cols[idx.val]) : 0;
+            const bal = idx.bal > -1 ? Utils.parseMoney(cols[idx.bal]) : 0;
             const desc = (idx.desc > -1 ? cols[idx.desc] : '').replace(/"/g, '');
             
             let cat = 'Outros';
@@ -110,28 +92,35 @@ const DataService = {
             else if(desc.toLowerCase().includes('pix')) cat = 'Pix';
             
             return {
-                date: date, description: desc, value: val, balance: bal,
-                category: cat, source: 'bradesco', type: val >= 0 ? 'income' : 'expense'
+                date, description: desc, value: val, balance: bal,
+                category: cat, source: sourceLabel, type: val >= 0 ? 'income' : 'expense'
             };
-        }).filter(t => t);
-        
-        this.bradescoTransactions.sort((a,b) => b.date - a.date);
+        }).filter(t => t).sort((a,b) => b.date - a.date);
+    },
+
+    parseBradescoTSV(text) {
+        this.bradescoTransactions = this.parseBankStatement(text, 'bradesco');
         this.updateYearsFromData(this.bradescoTransactions);
     },
 
-    parseSantanderTSV(text) {
+    parseSantanderAccountTSV(text) {
+        this.santanderAccountTransactions = this.parseBankStatement(text, 'santander_acc');
+        this.updateYearsFromData(this.santanderAccountTransactions);
+    },
+
+    parseSantanderCardTSV(text) {
         const rows = text.split('\n').map(r => r.trim()).filter(r => r);
         if (rows.length < 2) return;
         const headers = rows[0].toLowerCase().split('\t');
         
         const idx = {
-            date: headers.findIndex(h => h.includes('data') || h.includes('date')),
-            val: headers.findIndex(h => h.includes('valor') || h.includes('amount')),
+            date: headers.findIndex(h => h.includes('data')),
+            val: headers.findIndex(h => h.includes('valor')),
             cat: headers.findIndex(h => h.includes('categ') || h.includes('ramo')),
-            desc: headers.findIndex(h => h.includes('desc') || h.includes('estabelecimento')),
+            desc: headers.findIndex(h => h.includes('desc'))
         };
         
-        this.santanderTransactions = rows.slice(1).map(row => {
+        this.santanderCardTransactions = rows.slice(1).map(row => {
             const cols = row.split('\t');
             let date = new Date();
              if (idx.date > -1 && cols[idx.date]) {
@@ -145,14 +134,13 @@ const DataService = {
             const desc = idx.desc > -1 ? cols[idx.desc].replace(/"/g, '') : 'Santander';
             
             return {
-                date: date, description: desc, value: val,
-                category: idx.cat > -1 ? cols[idx.cat] : 'Cartão', source: 'santander',
+                date, description: desc, value: val,
+                category: idx.cat > -1 ? cols[idx.cat] : 'Cartão', source: 'santander_card',
                 type: val > 0 ? 'expense' : 'income' 
             };
-        }).filter(t => t && t.value !== 0);
+        }).filter(t => t && t.value !== 0).sort((a,b) => b.date - a.date);
         
-        this.santanderTransactions.sort((a,b) => b.date - a.date);
-        this.updateYearsFromData(this.santanderTransactions);
+        this.updateYearsFromData(this.santanderCardTransactions);
     },
 
     updateYearsFromData(list) {
@@ -166,7 +154,7 @@ const DataService = {
         }
     },
 
-    // --- CONSOLIDAÇÃO INTELIGENTE (Mantida igual ao passo anterior) ---
+    // --- CONSOLIDAÇÃO ---
 
     buildCache() {
         this.monthlyDataCache = {};
@@ -178,11 +166,8 @@ const DataService = {
             };
         });
 
-        const isIgnored = (desc) => {
-            const d = desc.toLowerCase();
-            return AppParams.ignorePatterns.some(pattern => d.includes(pattern));
-        };
-
+        const isIgnored = (desc) => AppParams.ignorePatterns.some(p => desc.toLowerCase().includes(p));
+        
         const getFiscalPeriod = (date) => {
             let m = date.getMonth();
             let y = date.getFullYear();
@@ -193,51 +178,66 @@ const DataService = {
             return { m, y };
         };
 
-        const bradescoBalances = {}; 
-        
-        this.bradescoTransactions.forEach(t => {
-            const key = `${t.date.getFullYear()}-${t.date.getMonth()}`;
-            if (bradescoBalances[key] === undefined) bradescoBalances[key] = t.balance;
+        // Rastreamento de Saldos por Mês (Snapshot)
+        const balances = { bradesco: {}, santander: {} };
 
-            const { m, y } = getFiscalPeriod(t.date);
-            
-            if (this.monthlyDataCache[y]) {
-                if (!isIgnored(t.description)) {
-                    const val = Math.abs(t.value);
-                    if (t.value > 0) {
-                        this.monthlyDataCache[y].income[m] += val;
-                        this.monthlyDataCache[y].acc.income[m] += val;
-                    } else {
-                        this.monthlyDataCache[y].expenses[m] += val;
-                        this.monthlyDataCache[y].acc.expenses[m] += val;
-                    }
-                }
-            }
-        });
+        const processAccount = (list, bankKey) => {
+            list.forEach(t => {
+                // Guarda saldo (como a lista é descrescente, o primeiro registro do mês encontrado é sobrescrito pelo último... 
+                // Espera, se está decrescente (mais novo pro mais velho), o primeiro que encontramos de um mês É o saldo final daquele mês.
+                // Mas iteramos todos. Precisamos garantir que pegamos o mais recente.
+                // Como iteramos, vamos salvar sempre e depois corrigir a lógica de captura.
+                // Melhor: salvar num map [mes] -> [saldo], e como está ordenado por data DESC, só salvamos se não existir ainda.
+                
+                const balKey = `${t.date.getFullYear()}-${t.date.getMonth()}`;
+                if (balances[bankKey][balKey] === undefined) balances[bankKey][balKey] = t.balance;
 
-        this.santanderTransactions.forEach(t => {
-            const { m, y } = getFiscalPeriod(t.date);
-            if (this.monthlyDataCache[y]) {
-                if (t.type === 'expense') { 
-                    const val = Math.abs(t.value);
+                const { m, y } = getFiscalPeriod(t.date);
+                if (this.monthlyDataCache[y]) {
                     if (!isIgnored(t.description)) {
-                        this.monthlyDataCache[y].expenses[m] += val;
-                        this.monthlyDataCache[y].card.expenses[m] += val;
+                        const val = Math.abs(t.value);
+                        if (t.value > 0) {
+                            this.monthlyDataCache[y].income[m] += val;
+                            this.monthlyDataCache[y].acc.income[m] += val;
+                        } else {
+                            this.monthlyDataCache[y].expenses[m] += val;
+                            this.monthlyDataCache[y].acc.expenses[m] += val;
+                        }
                     }
+                }
+            });
+        };
+
+        // 1. Processa Bradesco e Santander Conta
+        processAccount(this.bradescoTransactions, 'bradesco');
+        processAccount(this.santanderAccountTransactions, 'santander');
+
+        // 2. Processa Cartão
+        this.santanderCardTransactions.forEach(t => {
+            const { m, y } = getFiscalPeriod(t.date);
+            if (this.monthlyDataCache[y]) {
+                if (t.type === 'expense' && !isIgnored(t.description)) {
+                    const val = Math.abs(t.value);
+                    this.monthlyDataCache[y].expenses[m] += val;
+                    this.monthlyDataCache[y].card.expenses[m] += val;
                 }
             }
         });
 
-        let lastKnownBalance = 0;
-        if(this.bradescoTransactions.length > 0) lastKnownBalance = this.bradescoTransactions[0].balance;
+        // 3. Consolidar Saldos (Soma dos dois bancos)
+        let lastBrad = 0, lastSant = 0;
+        
+        // Pega saldo inicial mais recente disponível
+        if(this.bradescoTransactions.length) lastBrad = this.bradescoTransactions[this.bradescoTransactions.length-1].balance;
+        if(this.santanderAccountTransactions.length) lastSant = this.santanderAccountTransactions[this.santanderAccountTransactions.length-1].balance;
 
         AppParams.years.forEach(y => {
             for (let m = 0; m < 12; m++) {
                 const key = `${y}-${m}`;
-                if (bradescoBalances[key] !== undefined) {
-                    lastKnownBalance = bradescoBalances[key];
-                }
-                this.monthlyDataCache[y].balances[m] = lastKnownBalance;
+                if (balances.bradesco[key] !== undefined) lastBrad = balances.bradesco[key];
+                if (balances.santander[key] !== undefined) lastSant = balances.santander[key];
+                
+                this.monthlyDataCache[y].balances[m] = lastBrad + lastSant;
             }
         });
     },
@@ -284,25 +284,26 @@ const DataService = {
     },
 
     getConsolidatedTransactions() {
-        const bradesco = this.bradescoTransactions.map(t => ({...t, sourceLabel: 'Bradesco'}));
-        const santander = this.santanderTransactions.map(t => ({
+        const brad = this.bradescoTransactions.map(t => ({...t, sourceLabel: 'Bradesco'}));
+        const santAcc = this.santanderAccountTransactions.map(t => ({...t, sourceLabel: 'Santander Conta'}));
+        const santCard = this.santanderCardTransactions.map(t => ({
             ...t, 
             value: t.type === 'expense' ? -Math.abs(t.value) : Math.abs(t.value),
-            sourceLabel: 'Santander'
+            sourceLabel: 'Santander Cartão'
         }));
-        return [...bradesco, ...santander].sort((a,b) => b.date - a.date);
+        return [...brad, ...santAcc, ...santCard].sort((a,b) => b.date - a.date);
     },
     
     getAllCategories() {
         const cats = new Set();
         this.bradescoTransactions.forEach(t => cats.add(t.category));
-        this.santanderTransactions.forEach(t => cats.add(t.category));
+        this.santanderCardTransactions.forEach(t => cats.add(t.category));
         return Array.from(cats).sort();
     },
     
     getYearlyCategoryBreakdown(year) {
         const data = Array.from({length: 12}, () => ({}));
-        this.santanderTransactions.forEach(t => {
+        this.santanderCardTransactions.forEach(t => {
             if (t.date.getFullYear() === year && t.type === 'expense') {
                 const m = t.date.getMonth();
                 const cat = t.category || 'Outros';
@@ -336,8 +337,10 @@ const DataService = {
     },
     
     getGoalsStats() {
-        const curBal = this.bradescoTransactions.length > 0 ? this.bradescoTransactions[0].balance : 0;
-        return { currentBalance: curBal, avgExp: 0, runway: 0 };
+        // Soma saldo mais recente das duas contas
+        let b1 = this.bradescoTransactions.length > 0 ? this.bradescoTransactions[0].balance : 0;
+        let b2 = this.santanderAccountTransactions.length > 0 ? this.santanderAccountTransactions[0].balance : 0;
+        return { currentBalance: b1 + b2, avgExp: 0, runway: 0 };
     }
 };
 window.DataService = DataService;
