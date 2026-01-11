@@ -21,35 +21,20 @@ const AppParams = {
         chart: { lightGrid: '#f3f4f6', darkGrid: '#374151', lightText: '#6b7280', darkText: '#9ca3af' }
     },
     ignorePatterns: [
-        'pagamento fatura', 
-        'pagto fatura',
-        'transf conta', 
-        'transf. para',
-        'aplicacao', 
-        'resgate', 
-        'pix bradesco', 
-        'pix santander',
-        'transf tit',
-        'apl.invest fac'
+        'pagamento fatura', 'pagto fatura', 'transf conta', 'transf. para',
+        'aplicacao', 'resgate', 'pix bradesco', 'pix santander', 'transf tit', 'apl.invest fac'
     ],
     years: [2024, 2025, 2026],
     urls: {
-        // Fonte 1: Conta Bradesco (Hub)
         bradesco: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTfJcPWRMKT9iyUjGUs7EnCdAaqO7Z1TpHqWMT0nLSrl6TUbH43h5pKwnLHfieisnWUaHgdkYx3MAKs/pub?gid=1529188760&single=true&output=tsv',
-        
-        // Fonte 2: Conta Santander (Movimentação Corrente)
         santanderAccount: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTfJcPWRMKT9iyUjGUs7EnCdAaqO7Z1TpHqWMT0nLSrl6TUbH43h5pKwnLHfieisnWUaHgdkYx3MAKs/pub?gid=0&single=true&output=tsv',
-        
-        // Fonte 3: Cartão Santander (Fatura)
         santanderCard: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTfJcPWRMKT9iyUjGUs7EnCdAaqO7Z1TpHqWMT0nLSrl6TUbH43h5pKwnLHfieisnWUaHgdkYx3MAKs/pub?gid=894667076&single=true&output=tsv',
-
-        // --- NOVOS LINKS DE METAS ---
-        // Link PUBLICADO (TSV) da aba "Metas"
-        goals: 'SEU_LINK_TSV_DA_ABA_METAS_AQUI',
         
-        // Link de EDIÇÃO (Aquele que você usa para editar a planilha)
-        // Isso permitirá abrir a planilha direto do App para atualizar o valor
-        goalsEdit: 'https://docs.google.com/spreadsheets/d/SEU_ID_DA_PLANILHA/edit#gid=ID_DA_ABA_METAS'
+        // ABA METAS (Link Fornecido)
+        goals: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTfJcPWRMKT9iyUjGUs7EnCdAaqO7Z1TpHqWMT0nLSrl6TUbH43h5pKwnLHfieisnWUaHgdkYx3MAKs/pub?gid=202344055&single=true&output=tsv',
+        
+        // Link de Edição Direta (Montado com o ID da planilha e o GID da aba Metas)
+        goalsEdit: 'https://docs.google.com/spreadsheets/d/1vTfJcPWRMKT9iyUjGUs7EnCdAaqO7Z1TpHqWMT0nLSrl6/edit#gid=202344055'
     }
 };
 window.AppParams = AppParams;
