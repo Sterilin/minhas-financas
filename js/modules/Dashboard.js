@@ -90,7 +90,11 @@ const Dashboard = {
                 </div>
             </div>
 
-            <h3 class="font-semibold text-gray-700 dark:text-gray-200 mt-6 mb-3 px-1">Análise de Comportamento (Padrões)</h3>
+            <div class="mt-6 mb-3 px-1">
+                <h3 class="font-semibold text-gray-700 dark:text-gray-200">Análise de Comportamento (Padrões)</h3>
+                <p class="text-[10px] text-gray-400">Análise dos últimos 3 meses</p>
+            </div>
+            
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div class="bg-white p-5 rounded-xl card-shadow dark:bg-gray-800 transition-theme">
                     <div class="flex justify-between items-start mb-2">
@@ -116,8 +120,8 @@ const Dashboard = {
             </div>
 
             <div class="mt-6 bg-white p-5 rounded-xl card-shadow dark:bg-gray-800 transition-theme">
-                <div class="flex justify-between items-center mb-4"><h3 class="font-semibold text-gray-700 dark:text-gray-200">Distribuição de Gastos</h3><button onclick="Handlers.switchTab('expenses')" class="text-xs text-blue-600 hover:text-blue-700 font-medium dark:text-blue-400 transition-colors">Ver detalhes</button></div>
-                <div id="block-chart-container" class="w-full h-64 flex gap-2 overflow-hidden rounded-lg val-privacy font-sans items-center justify-center text-xs text-gray-400">Carregando dados...</div>
+                <div class="flex justify-between items-center mb-4"><h3 class="font-semibold text-gray-700 dark:text-gray-200">Ritmo de Gastos (Evolução Semanal)</h3><button onclick="Handlers.switchTab('expenses')" class="text-xs text-blue-600 hover:text-blue-700 font-medium dark:text-blue-400 transition-colors">Ver detalhes</button></div>
+                <div id="weekly-chart-container" class="w-full h-40 flex items-end justify-between gap-4 px-4 val-privacy">Carregando dados...</div>
             </div>
             
             <div class="mt-6 bg-white p-5 rounded-xl card-shadow border border-gray-100 dark:bg-gray-800 dark:border-gray-700 transition-theme w-full">
@@ -130,45 +134,38 @@ const Dashboard = {
         `;
     },
 
-    renderBlockChart(items) {
-        const container = Utils.DOM.get('block-chart-container');
+    renderWeeklyChart(weeklyData) {
+        const container = Utils.DOM.get('weekly-chart-container');
         if(!container) return;
-        const total = items.reduce((a,b) => a+b.v, 0);
         
-        if(total === 0) { 
-            container.innerHTML = '<div class="w-full h-full flex items-center justify-center text-gray-400 text-xs">Sem dados</div>';
-            return; 
+        const total = weeklyData.reduce((a,b) => a+b, 0);
+        if(total === 0) {
+            container.innerHTML = '<div class="w-full h-full flex items-center justify-center text-gray-400 text-xs">Sem dados neste mês.</div>';
+            return;
         }
 
-        let html = '';
-        if (items[0]) {
-            const p = Math.round((items[0].v/total)*100);
-            html += `<div class="flex-1 flex flex-col gap-2 p-1">
-                <div class="${items[0].c} h-full w-full rounded-lg flex flex-col items-start justify-end p-3 text-white relative">
-                    <span class="text-xs font-semibold opacity-80">${items[0].k}</span>
-                    <span class="text-lg font-bold">${Utils.formatCurrency(items[0].v)}</span>
-                    <span class="absolute top-2 right-2 text-xs font-bold opacity-60">${p}%</span>
+        const max = Math.max(...weeklyData, 1);
+        const labels = ['Semana 1 (1-7)', 'Semana 2 (8-14)', 'Semana 3 (15-21)', 'Semana 4 (22+)'];
+        
+        const html = weeklyData.map((val, i) => {
+            const pct = Math.round((val / max) * 100);
+            const displayVal = Utils.formatCurrency(val);
+            const isHigh = (val / total) > 0.3; 
+            const color = isHigh ? 'bg-rose-500' : 'bg-blue-500';
+            
+            return `
+                <div class="flex-1 flex flex-col items-center group h-full justify-end">
+                    <div class="relative w-full bg-gray-100 dark:bg-gray-700 rounded-t-lg flex items-end h-full overflow-hidden">
+                        <div class="${color} w-full transition-all duration-700 ease-out rounded-t-lg relative group-hover:opacity-90" style="height: ${pct}%">
+                            <span class="absolute -top-6 left-1/2 -translate-x-1/2 text-[10px] font-bold text-gray-600 dark:text-gray-300 opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap bg-white dark:bg-gray-800 px-1 rounded shadow">${displayVal}</span>
+                        </div>
+                    </div>
+                    <div class="mt-2 text-[10px] font-medium text-gray-500 text-center uppercase tracking-wide">${labels[i]}</div>
+                    <div class="text-xs font-bold text-gray-800 dark:text-gray-200 mt-0.5">${displayVal}</div>
                 </div>
-            </div>`;
-        }
-        html += '<div class="flex-1 flex flex-col gap-2 p-1">';
-        if (items[1]) {
-                const p = Math.round((items[1].v/total)*100);
-                html += `<div class="${items[1].c} h-1/2 w-full rounded-lg flex flex-col items-start justify-end p-3 text-white relative">
-                <span class="text-xs font-semibold opacity-80">${items[1].k}</span>
-                <span class="text-base font-bold">${Utils.formatCurrency(items[1].v)}</span>
-                <span class="absolute top-2 right-2 text-xs font-bold opacity-60">${p}%</span>
-                </div>`;
-        }
-        html += '<div class="flex-1 flex gap-2">';
-        for(let i=2; i<Math.min(items.length, 5); i++) {
-            const p = Math.round((items[i].v/total)*100);
-            html += `<div class="${items[i].c} flex-1 rounded-lg flex flex-col items-center justify-center p-1 text-white relative">
-                <span class="text-[10px] font-semibold opacity-80 truncate w-full text-center">${items[i].k}</span>
-                <span class="text-xs font-bold">${p}%</span>
-            </div>`;
-        }
-        html += '</div></div>';
+            `;
+        }).join('');
+        
         container.innerHTML = html;
     },
 
@@ -249,6 +246,9 @@ const Dashboard = {
 
         stats.categories.forEach(cat => { cat.c = UI.getCategoryColor(cat.k); });
         this.renderBlockChart(stats.categories);
+
+        // Renderiza o novo gráfico de Ritmo Semanal
+        this.renderWeeklyChart(stats.metrics.weeklyPace);
 
         const inflationData = DataService.getYearlyCategoryBreakdown(year);
         setTimeout(() => ChartManager.renderInflation(year, inflationData), 0);
