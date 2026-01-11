@@ -58,8 +58,11 @@
 
         <div id="sub-nav-data" class="hidden bg-gray-50 dark:bg-gray-800/50 border-b border-gray-200 dark:border-gray-700 transition-all">
             <div class="max-w-4xl mx-auto px-4 py-2 flex gap-3 overflow-x-auto">
-                <button onclick="Handlers.switchTab('consolidated')" id="btn-consolidated" class="subtab-inactive px-3 py-1.5 rounded-md text-xs font-medium transition-colors flex items-center gap-2 text-indigo-600 dark:text-indigo-400">
+                <button onclick="Handlers.switchTab('consolidated')" id="btn-consolidated" class="subtab-active px-3 py-1.5 rounded-md text-xs font-medium transition-colors flex items-center gap-2 text-indigo-600 dark:text-indigo-400">
                     <i class="fa-solid fa-layer-group"></i> Consolidado
+                </button>
+                <button onclick="Handlers.switchTab('bradesco')" id="btn-bradesco" class="subtab-inactive px-3 py-1.5 rounded-md text-xs font-medium transition-colors flex items-center gap-2 text-red-600 dark:text-red-400">
+                    <i class="fa-solid fa-building-columns"></i> Conta Bradesco
                 </button>
                 <button onclick="Handlers.switchTab('history')" id="btn-history" class="subtab-inactive px-3 py-1.5 rounded-md text-xs font-medium transition-colors flex items-center gap-2">
                     <i class="fa-solid fa-clock-rotate-left"></i> Conta Santander
@@ -67,7 +70,7 @@
                 <button onclick="Handlers.switchTab('santander')" id="btn-santander" class="subtab-inactive px-3 py-1.5 rounded-md text-xs font-medium transition-colors flex items-center gap-2 text-rose-600 dark:text-rose-400">
                     <i class="fa-brands fa-cc-mastercard"></i> Cartão Santander
                 </button>
-                <button onclick="Handlers.switchTab('expenses')" id="btn-expenses" class="subtab-active px-3 py-1.5 rounded-md text-xs font-medium transition-colors flex items-center gap-2">
+                <button onclick="Handlers.switchTab('expenses')" id="btn-expenses" class="subtab-inactive px-3 py-1.5 rounded-md text-xs font-medium transition-colors flex items-center gap-2">
                     <i class="fa-solid fa-receipt"></i> Outros
                 </button>
             </div>
@@ -78,7 +81,27 @@
         <div class="max-w-4xl mx-auto">
             
             <section id="view-dashboard" class="fade-in">
-                </section>
+            </section>
+
+            <section id="view-bradesco" class="hidden fade-in">
+                <div class="bg-white p-6 rounded-xl card-shadow dark:bg-gray-800 transition-theme mb-6">
+                    <div class="flex justify-between items-center mb-6"><h3 class="font-bold text-gray-800 dark:text-white text-lg"><i class="fa-solid fa-building-columns text-red-600 mr-2"></i> Extrato Bradesco</h3></div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-sm text-gray-500 dark:text-gray-400">
+                            <thead class="bg-gray-50 text-xs uppercase text-gray-700 dark:bg-gray-700 dark:text-gray-400">
+                                <tr>
+                                    <th class="px-3 py-2 rounded-l-lg">Data</th>
+                                    <th class="px-3 py-2">Tipo</th>
+                                    <th class="px-3 py-2">Categoria</th>
+                                    <th class="px-3 py-2">Descrição</th>
+                                    <th class="px-3 py-2 text-right">Valor</th>
+                                </tr>
+                            </thead>
+                            <tbody id="bradesco-table-body" class="divide-y divide-gray-100 dark:divide-gray-700"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
 
             <section id="view-expenses" class="hidden fade-in">
                 <div class="bg-white p-6 rounded-xl card-shadow dark:bg-gray-800 transition-theme mb-6">
