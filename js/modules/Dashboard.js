@@ -122,8 +122,8 @@ const Dashboard = {
             
             <div class="mt-6 bg-white p-5 rounded-xl card-shadow border border-gray-100 dark:bg-gray-800 dark:border-gray-700 transition-theme w-full">
                 <div class="mb-4">
-                     <h4 class="text-sm font-bold text-gray-700 dark:text-gray-200">Inflação Pessoal (Evolução de Categorias)</h4>
-                     <p class="text-[10px] text-gray-400">Histórico anual de gastos no Cartão por categoria</p>
+                     <h4 class="text-sm font-bold text-gray-700 dark:text-gray-200">Inflação Pessoal - Fatura Santander</h4>
+                     <p class="text-[10px] text-gray-400">Evolução de categorias mês a mês (Apenas Gastos de Fatura)</p>
                  </div>
                  <div class="w-full h-64 val-privacy"><canvas id="inflationChart"></canvas></div>
             </div>
@@ -179,7 +179,6 @@ const Dashboard = {
             container.innerHTML = this.getTemplate();
         }
 
-        // Checa se há dados
         if ((!DataService.bradescoTransactions || DataService.bradescoTransactions.length === 0) &&
             (!DataService.santanderAccountTransactions || DataService.santanderAccountTransactions.length === 0) &&
             (!DataService.santanderCardTransactions || DataService.santanderCardTransactions.length === 0)) {
@@ -193,18 +192,15 @@ const Dashboard = {
 
         const updateVal = (id, val) => Utils.DOM.updateText(id, Utils.formatCurrency(val));
 
-        // Container 1
         updateVal('dash-real-balance', stats.metrics.realBalance);
         updateVal('dash-open-invoice', stats.metrics.openInvoice);
         updateVal('dash-predicted-income', stats.metrics.predictedIncome);
         updateVal('dash-fixed-cost', stats.metrics.fixedCost);
 
-        // Container 2
         updateVal('dash-bal-bradesco', stats.metrics.balBrad);
         updateVal('dash-bal-santander', stats.metrics.balSant);
         Utils.DOM.updateText('dash-disposable-rate', stats.metrics.disposableRate.toFixed(1) + '%');
 
-        // Pareto Logic
         const pData = stats.metrics.pareto;
         const paretoEl = Utils.DOM.get('pareto-content');
         if (paretoEl) {
@@ -237,7 +233,6 @@ const Dashboard = {
             }
         }
 
-        // Heatmap Logic
         const hData = stats.metrics.heatmap;
         const heatEl = Utils.DOM.get('heatmap-container');
         if (heatEl) {
