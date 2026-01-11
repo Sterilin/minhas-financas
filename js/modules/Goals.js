@@ -53,7 +53,11 @@ const Goals = {
 
     render() {
         const container = Utils.DOM.get('view-goals');
-        if(container && container.children.length === 0) {
+        if (!container) return;
+
+        // CORREÇÃO: Força a injeção do template se o Grid novo não existir
+        // Isso remove qualquer HTML antigo que esteja "travando" a renderização
+        if (!container.querySelector('#goals-grid')) {
             container.innerHTML = this.getTemplate();
         }
 
@@ -76,11 +80,10 @@ const Goals = {
             if (stats.goals && stats.goals.length > 0) {
                 grid.innerHTML = stats.goals.map(g => this.createGoalCard(g)).join('');
             } else {
-                // Diagnóstico para o usuário
                 grid.innerHTML = `
                 <div class="text-center py-8 text-gray-400 text-xs border border-dashed border-gray-300 rounded-lg bg-gray-50 dark:bg-gray-800/50">
                     <p class="font-bold mb-1">Nenhuma meta encontrada</p>
-                    <p>Verifique se a planilha de metas está preenchida corretamente.</p>
+                    <p>Verifique se os dados estão preenchidos na aba 'Metas' da planilha.</p>
                 </div>`;
             }
         }
@@ -96,7 +99,7 @@ const Goals = {
             mediaHtml = `<div class="w-full h-full flex items-center justify-center bg-gray-100 dark:bg-gray-700 text-gray-400 text-4xl"><i class="${iconClass}"></i></div>`;
         }
 
-        // Lógica de Datas (Estimativa: Data Hoje + Meses Restantes)
+        // Lógica de Datas
         const totalMonthsNeeded = goal.monthly > 0 ? Math.ceil(goal.total / goal.monthly) : 0;
         const monthsElapsed = totalMonthsNeeded - goal.monthsLeft;
         
