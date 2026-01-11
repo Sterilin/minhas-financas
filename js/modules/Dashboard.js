@@ -10,84 +10,84 @@ const Dashboard = {
     getTemplate() {
         return `
             <div class="flex justify-between items-center mb-4">
-                <h2 class="text-lg font-semibold text-gray-700 dark:text-gray-200">Visão Geral (Mês Atual)</h2>
+                <h2 class="text-lg font-semibold text-gray-700 dark:text-gray-200">Visão Mensal Geral</h2>
                 <span class="text-xs bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 px-2 py-1 rounded-full font-medium" id="current-month-badge">Carregando...</span>
             </div>
             
-            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                <div class="bg-white p-5 rounded-xl card-shadow border-l-4 border-emerald-500 dark:bg-gray-800 transition-theme">
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+                <div class="bg-white p-5 rounded-xl card-shadow border-l-4 border-indigo-500 dark:bg-gray-800 transition-theme">
                     <div class="flex justify-between items-start">
-                        <div><p class="text-sm text-gray-500 font-medium uppercase dark:text-gray-400">Ganhos Totais (Conta)</p><h3 class="text-2xl font-bold text-gray-800 mt-1 dark:text-white val-privacy" id="dash-total-income">...</h3></div>
-                        <div class="bg-emerald-100 text-emerald-600 p-2 rounded-lg dark:bg-emerald-900/30 dark:text-emerald-400"><i class="fa-solid fa-arrow-trend-up"></i></div>
+                        <div>
+                            <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Saldo Atual (Real)</p>
+                            <h3 class="text-xl font-bold text-gray-800 mt-1 dark:text-white val-privacy" id="dash-real-balance">...</h3>
+                        </div>
+                        <div class="bg-indigo-100 text-indigo-600 p-2 rounded-lg dark:bg-indigo-900/30 dark:text-indigo-400"><i class="fa-solid fa-wallet"></i></div>
                     </div>
-                    <p id="income-trend-container" class="text-xs mt-3 flex items-center text-gray-400"><i id="income-trend-icon" class="fa-solid fa-minus mr-1"></i> <span id="dash-income-trend">...</span> vs mês anterior</p>
-                </div>
-
-                <div class="bg-white p-5 rounded-xl card-shadow border-l-4 border-rose-500 dark:bg-gray-800 transition-theme">
-                    <div class="flex justify-between items-start">
-                        <div><p class="text-sm text-gray-500 font-medium uppercase dark:text-gray-400">Gastos Totais (Conta)</p><h3 class="text-2xl font-bold text-gray-800 mt-1 dark:text-white val-privacy" id="dash-total-expense">...</h3></div>
-                        <div class="bg-rose-100 text-rose-600 p-2 rounded-lg dark:bg-rose-900/30 dark:text-rose-400"><i class="fa-solid fa-arrow-trend-down"></i></div>
-                    </div>
-                    <p id="expense-trend-container" class="text-xs mt-3 flex items-center text-gray-400"><i id="expense-trend-icon" class="fa-solid fa-minus mr-1"></i> <span id="dash-expense-trend">...</span> vs mês anterior</p>
                 </div>
 
                 <div class="bg-white p-5 rounded-xl card-shadow border-l-4 border-purple-500 dark:bg-gray-800 transition-theme">
                     <div class="flex justify-between items-start">
                         <div>
-                            <p class="text-sm text-gray-500 font-medium uppercase dark:text-gray-400">Fatura Cartão</p>
-                            <h3 class="text-2xl font-bold text-gray-800 mt-1 dark:text-white val-privacy" id="dash-card-invoice">...</h3>
+                            <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Fatura Aberta</p>
+                            <h3 class="text-xl font-bold text-gray-800 mt-1 dark:text-white val-privacy" id="dash-open-invoice">...</h3>
                         </div>
                         <div class="bg-purple-100 text-purple-600 p-2 rounded-lg dark:bg-purple-900/30 dark:text-purple-400"><i class="fa-brands fa-cc-mastercard"></i></div>
                     </div>
-                    <p class="text-xs text-gray-400 mt-2 dark:text-gray-500">Fatura Atual (16/M-1 a 15/M)</p>
+                    <p class="text-[10px] text-gray-400 mt-1">Passivo (16/M-1 a 15/M)</p>
+                </div>
+
+                <div class="bg-white p-5 rounded-xl card-shadow border-l-4 border-emerald-500 dark:bg-gray-800 transition-theme">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Receita Prevista</p>
+                            <h3 class="text-xl font-bold text-gray-800 mt-1 dark:text-white val-privacy" id="dash-predicted-income">...</h3>
+                        </div>
+                        <div class="bg-emerald-100 text-emerald-600 p-2 rounded-lg dark:bg-emerald-900/30 dark:text-emerald-400"><i class="fa-solid fa-arrow-trend-up"></i></div>
+                    </div>
+                    <p class="text-[10px] text-gray-400 mt-1">Média últimos 3 meses</p>
                 </div>
 
                 <div class="bg-white p-5 rounded-xl card-shadow border-l-4 border-orange-400 dark:bg-gray-800 transition-theme">
                     <div class="flex justify-between items-start">
-                        <div><p class="text-sm text-gray-500 font-medium uppercase dark:text-gray-400">Custo Fixo</p><h3 class="text-2xl font-bold text-gray-800 mt-1 dark:text-white val-privacy" id="dash-fixed-cost">...</h3><div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-1.5 mt-2"><div class="bg-orange-400 h-1.5 rounded-full" style="width: 70%"></div></div></div>
+                        <div>
+                            <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Custo Fixo Médio</p>
+                            <h3 class="text-xl font-bold text-gray-800 mt-1 dark:text-white val-privacy" id="dash-fixed-cost">...</h3>
+                        </div>
                         <div class="bg-orange-100 text-orange-600 p-2 rounded-lg dark:bg-orange-900/30 dark:text-orange-400"><i class="fa-solid fa-house-chimney"></i></div>
                     </div>
-                    <p class="text-xs text-gray-400 mt-2 dark:text-gray-500">Aluguel, Luz, Internet, Serviços...</p>
-                </div>
-
-                <div class="bg-white p-5 rounded-xl card-shadow border-l-4 border-indigo-500 dark:bg-gray-800 transition-theme">
-                    <div class="flex justify-between items-start">
-                        <div><p class="text-sm text-gray-500 font-medium uppercase dark:text-gray-400">Saldo Atual (Conta)</p><h3 class="text-2xl font-bold text-gray-800 mt-1 dark:text-white val-privacy" id="dash-balance">...</h3><p class="text-xs text-indigo-600 font-semibold mt-1 dark:text-indigo-400">Fluxo de Caixa</p></div>
-                        <div class="bg-indigo-100 text-indigo-600 p-2 rounded-lg dark:bg-indigo-900/30 dark:text-indigo-400"><i class="fa-solid fa-wallet"></i></div>
-                    </div>
-                    <button class="w-full mt-3 py-1.5 text-xs font-medium text-indigo-600 border border-indigo-200 rounded hover:bg-indigo-50 transition dark:text-indigo-400 dark:border-indigo-800 dark:hover:bg-indigo-900/30" onclick="Handlers.switchTab('report')">Ver Relatório Completo</button>
-                </div>
-
-                <div class="bg-white p-5 rounded-xl card-shadow border-l-4 border-teal-500 dark:bg-gray-800 transition-theme">
-                    <div class="flex justify-between items-start">
-                        <div><p class="text-sm text-gray-500 font-medium uppercase dark:text-gray-400">Saldo em Conta</p><h3 class="text-2xl font-bold text-gray-800 mt-1 dark:text-white val-privacy" id="dash-account-balance">...</h3><p class="text-xs text-teal-600 font-semibold mt-1 dark:text-teal-400">Extrato Bancário</p></div>
-                        <div class="bg-teal-100 text-teal-600 p-2 rounded-lg dark:bg-teal-900/30 dark:text-teal-400"><i class="fa-solid fa-building-columns"></i></div>
-                    </div>
-                    <button class="w-full mt-3 py-1.5 text-xs font-medium text-teal-600 border border-teal-200 rounded hover:bg-teal-50 transition dark:text-teal-400 dark:border-teal-800 dark:hover:bg-teal-900/30" onclick="Handlers.switchTab('bradesco')">Ver Extrato</button>
+                    <p class="text-[10px] text-gray-400 mt-1">Aluguel, Luz, Internet...</p>
                 </div>
             </div>
 
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
-                <div class="bg-white p-5 rounded-xl card-shadow dark:bg-gray-800 transition-theme flex items-center justify-between">
-                     <div>
-                         <p class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Taxa de Renda Disponível</p>
-                         <h3 class="text-xl font-bold text-gray-800 dark:text-white val-privacy" id="dash-discretionary">...</h3>
-                         <p class="text-[10px] text-gray-400 mt-1">(Receita - Custos Fixos) / Receita</p>
-                    </div>
-                     <div class="h-10 w-10 rounded-full bg-purple-100 text-purple-600 flex items-center justify-center dark:bg-purple-900/30 dark:text-purple-400">
-                         <i class="fa-solid fa-percent"></i>
-                      </div>
-                </div>
-                <div class="bg-white p-5 rounded-xl card-shadow dark:bg-gray-800 transition-theme flex items-center justify-between">
+            <h3 class="font-semibold text-gray-700 dark:text-gray-200 mb-3 px-1">Saldo em Contas & Saúde</h3>
+            
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
+                <div class="bg-white p-4 rounded-xl card-shadow dark:bg-gray-800 transition-theme flex items-center justify-between border-l-4 border-red-600">
                     <div>
-                        <p class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Ponto de Equilíbrio</p>
-                        <h3 class="text-xl font-bold text-gray-800 dark:text-white" id="dash-breakeven">...</h3>
-                        <p class="text-[10px] text-gray-400 mt-1">Dia onde Receita acumulada > Despesas</p>
-                     </div>
-                    <div class="h-10 w-10 rounded-full bg-cyan-100 text-cyan-600 flex items-center justify-center dark:bg-cyan-900/30 dark:text-cyan-400">
-                        <i class="fa-solid fa-scale-unbalanced"></i>
+                        <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Bradesco</p>
+                        <h3 class="text-lg font-bold text-gray-800 dark:text-white val-privacy" id="dash-bal-bradesco">...</h3>
                     </div>
-               </div>
+                    <i class="fa-solid fa-building-columns text-red-600 text-xl opacity-50"></i>
+                </div>
+
+                <div class="bg-white p-4 rounded-xl card-shadow dark:bg-gray-800 transition-theme flex items-center justify-between border-l-4 border-rose-600">
+                    <div>
+                        <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Santander</p>
+                        <h3 class="text-lg font-bold text-gray-800 dark:text-white val-privacy" id="dash-bal-santander">...</h3>
+                    </div>
+                    <i class="fa-solid fa-building-columns text-rose-600 text-xl opacity-50"></i>
+                </div>
+
+                <div class="bg-white p-4 rounded-xl card-shadow dark:bg-gray-800 transition-theme flex items-center justify-between border-l-4 border-blue-500">
+                    <div>
+                        <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Taxa Renda Disp.</p>
+                        <h3 class="text-lg font-bold text-gray-800 dark:text-white val-privacy" id="dash-disposable-rate">...</h3>
+                        <p class="text-[9px] text-gray-400 mt-0.5">(Saldo Disp - Fixo) / Saldo Disp</p>
+                    </div>
+                    <div class="h-8 w-8 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center dark:bg-blue-900/30 dark:text-blue-400">
+                        <i class="fa-solid fa-percent"></i>
+                    </div>
+                </div>
             </div>
 
             <h3 class="font-semibold text-gray-700 dark:text-gray-200 mt-6 mb-3 px-1">Análise de Comportamento (Padrões)</h3>
@@ -179,9 +179,10 @@ const Dashboard = {
             container.innerHTML = this.getTemplate();
         }
 
-        // --- Correção: Checa se há dados no Bradesco ou Santander ---
+        // Checa se há dados
         if ((!DataService.bradescoTransactions || DataService.bradescoTransactions.length === 0) &&
-            (!DataService.santanderTransactions || DataService.santanderTransactions.length === 0)) {
+            (!DataService.santanderAccountTransactions || DataService.santanderAccountTransactions.length === 0) &&
+            (!DataService.santanderCardTransactions || DataService.santanderCardTransactions.length === 0)) {
             return;
         }
 
@@ -191,28 +192,19 @@ const Dashboard = {
         Utils.DOM.updateText('current-month-badge', `${AppParams.months.full[month]} ${year}`);
 
         const updateVal = (id, val) => Utils.DOM.updateText(id, Utils.formatCurrency(val));
-        const updateTrend = (containerId, textId, trendVal, isIncome) => {
-            const isPos = trendVal >= 0;
-            const color = isIncome ? (isPos ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400') : (isPos ? 'text-rose-600 dark:text-rose-400' : 'text-emerald-600 dark:text-emerald-400');
-            const el = Utils.DOM.get(containerId);
-            if(el) {
-                el.className = `text-xs mt-3 flex items-center ${color}`;
-                Utils.DOM.updateText(textId, `${isPos?'+':''}${trendVal.toFixed(1)}%`);
-                el.querySelector('i').className = `fa-solid ${isPos ? 'fa-caret-up' : 'fa-caret-down'} mr-1`;
-            }
-        };
 
-        updateVal('dash-total-income', stats.metrics.income);
-        updateVal('dash-total-expense', stats.metrics.expense);
-        updateVal('dash-balance', stats.metrics.balance);
+        // Container 1
+        updateVal('dash-real-balance', stats.metrics.realBalance);
+        updateVal('dash-open-invoice', stats.metrics.openInvoice);
+        updateVal('dash-predicted-income', stats.metrics.predictedIncome);
         updateVal('dash-fixed-cost', stats.metrics.fixedCost);
-        updateVal('dash-account-balance', stats.metrics.accountBalance);
-        updateVal('dash-card-invoice', stats.metrics.cardInvoice);
-        
-        Utils.DOM.updateText('dash-discretionary', `${stats.metrics.discretionaryRatio.toFixed(1)}%`);
-        const beDay = stats.metrics.breakEvenDay;
-        Utils.DOM.updateText('dash-breakeven', beDay ? `Dia ${beDay}` : 'Não atingido');
 
+        // Container 2
+        updateVal('dash-bal-bradesco', stats.metrics.balBrad);
+        updateVal('dash-bal-santander', stats.metrics.balSant);
+        Utils.DOM.updateText('dash-disposable-rate', stats.metrics.disposableRate.toFixed(1) + '%');
+
+        // Pareto Logic
         const pData = stats.metrics.pareto;
         const paretoEl = Utils.DOM.get('pareto-content');
         if (paretoEl) {
@@ -245,6 +237,7 @@ const Dashboard = {
             }
         }
 
+        // Heatmap Logic
         const hData = stats.metrics.heatmap;
         const heatEl = Utils.DOM.get('heatmap-container');
         if (heatEl) {
@@ -258,9 +251,6 @@ const Dashboard = {
                 return `<div class="${bg} rounded-sm aspect-square flex items-center justify-center text-[8px] hover:scale-125 transition-transform cursor-default font-medium" style="${style}" title="${title}">${day}</div>`; 
             }).join('');
         }
-
-        updateTrend('income-trend-container', 'dash-income-trend', stats.trends.income, true);
-        updateTrend('expense-trend-container', 'dash-expense-trend', stats.trends.expense, false);
 
         stats.categories.forEach(cat => { cat.c = UI.getCategoryColor(cat.k); });
         this.renderBlockChart(stats.categories);
