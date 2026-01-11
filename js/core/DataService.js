@@ -9,6 +9,7 @@ const DataService = {
     notify() { this.listeners.forEach(fn => fn(this)); },
 
     async init() {
+        // ... (Init mantido igual) ...
         console.log("🚀 DataService: Iniciando...");
         Utils.DOM.updateText('current-month-badge', 'Sincronizando Bancos...');
 
@@ -173,7 +174,6 @@ const DataService = {
 
         const balances = { bradesco: {}, santander: {} };
 
-        // Processa Contas
         const processAccount = (list, bankKey) => {
             if (!list) return;
             list.forEach(t => {
@@ -199,7 +199,6 @@ const DataService = {
         processAccount(this.bradescoTransactions, 'bradesco');
         processAccount(this.santanderAccountTransactions, 'santander');
 
-        // Processa Cartão
         if (this.santanderCardTransactions) {
             this.santanderCardTransactions.forEach(t => {
                 const { m, y } = getFiscalPeriod(t.date);
@@ -213,7 +212,6 @@ const DataService = {
             });
         }
 
-        // Saldos
         let lastBrad = 0, lastSant = 0;
         if(this.bradescoTransactions && this.bradescoTransactions.length) lastBrad = this.bradescoTransactions[this.bradescoTransactions.length-1].balance;
         if(this.santanderAccountTransactions && this.santanderAccountTransactions.length) lastSant = this.santanderAccountTransactions[this.santanderAccountTransactions.length-1].balance;
@@ -270,48 +268,56 @@ const DataService = {
         return [...brad, ...santAcc, ...santCard].sort((a,b) => b.date - a.date);
     },
     
-    // --- LÓGICA DO DASHBOARD (Atualizada) ---
+    // --- LÓGICA DO DASHBOARD ---
     getDashboardStats(year, month) {
-        // 1. Saldos Individuais (Snapshot Atual)
+        // 1. Saldos Individuais
         let balBrad = 0, balSant = 0;
         if (this.bradescoTransactions.length > 0) balBrad = this.bradescoTransactions[0].balance;
         if (this.santanderAccountTransactions.length > 0) balSant = this.santanderAccountTransactions[0].balance;
         
-        // 2. Fatura Aberta (16/M-1 a 15/M) e Heatmap/Pareto
-        let invoiceTotal = 0;
-        let invoiceCategories = {};
-        const dailyExpenses = new Array(31).fill(0);
-
+        // --- JANELA ATUAL (Para Cards de Fatura) ---
+        // 16/M-1 a 15/M
         let startM = month - 1; let startY = year;
         if (startM < 0) { startM = 11; startY--; }
-        const startDate = new Date(startY, startM, 16);
+        const currentStartDate = new Date(startY, startM, 16);
         const endDate = new Date(year, month, 15, 23, 59, 59);
 
-        // Consolida transações para análise de padrões (Cartão + Pix Recentes)
-        // Focamos no Cartão para a fatura aberta, mas o heatmap pode incluir pix se desejar.
-        // A pedido: "Fatura Aberta" é passivo.
+        // --- JANELA DE PADRÕES (3 Meses) ---
+        // 16/M-3 a 15/M
+        let patternStartM = month - 3; let patternStartY = year;
+        // Ajuste de ano (JS handle negative months in date constructor automatically, but being explicit is safer)
+        const patternStartDate = new Date(year, month - 3, 16); 
+
+        // 2. Acumulação
+        let invoiceTotal = 0; // Apenas mês atual
+        let paretoTotal = 0;  // 3 meses
+        let paretoCategories = {}; // 3 meses
+        const dailyExpenses = new Array(31).fill(0); // 3 meses (acumula por dia do mês 1-31)
+
         if (this.santanderCardTransactions) {
             this.santanderCardTransactions.forEach(t => {
-                if (t.date >= startDate && t.date <= endDate) {
-                    if (t.type === 'expense' && !AppParams.ignorePatterns.some(p => t.description.toLowerCase().includes(p))) {
-                        const val = Math.abs(t.value);
-                        invoiceTotal += val;
-                        const cat = t.category || 'Outros';
-                        invoiceCategories[cat] = (invoiceCategories[cat] || 0) + val;
-                        
-                        // Heatmap (Dia do mês fiscal ou civil? Vamos usar civil para visualização)
-                        // Para alinhar com a fatura, usamos o dia da transação
-                        if (t.date.getMonth() === month && t.date.getFullYear() === year) {
-                            const d = t.date.getDate();
-                            if(d <= 31) dailyExpenses[d-1] += val;
-                        }
-                    }
+                if (t.type !== 'expense' || AppParams.ignorePatterns.some(p => t.description.toLowerCase().includes(p))) return;
+                const val = Math.abs(t.value);
+
+                // Lógica: Fatura Aberta (Mês Atual Estrito)
+                if (t.date >= currentStartDate && t.date <= endDate) {
+                    invoiceTotal += val;
+                }
+
+                // Lógica: Padrões (3 Meses)
+                if (t.date >= patternStartDate && t.date <= endDate) {
+                    paretoTotal += val;
+                    const cat = t.category || 'Outros';
+                    paretoCategories[cat] = (paretoCategories[cat] || 0) + val;
+                    
+                    // Heatmap (Dia 1 a 31)
+                    const d = t.date.getDate();
+                    if(d <= 31) dailyExpenses[d-1] += val;
                 }
             });
         }
 
-        // 3. Cálculos de Média (Últimas 3 Janelas)
-        // Janelas: M-1, M-2, M-3 (Meses Fechados para previsão estável)
+        // 3. Cálculos de Média (Últimas 3 Janelas para Cards)
         let sumIncome = 0;
         let sumFixed = 0;
         let sumProjBalance = 0;
@@ -323,19 +329,13 @@ const DataService = {
             
             const d = this.getMonthly(y);
             if (d) {
-                // Receita
                 const inc = d.income[m];
                 sumIncome += inc;
                 
-                // Saldo Disponível Histórico (Receita - Despesas Totais naquele mês)
-                // Usamos (Income - Expense) como proxy de "Saldo Disponível gerado no mês"
                 const exp = d.expenses[m];
-                sumProjBalance += (inc - exp); // Fluxo Líquido
+                sumProjBalance += (inc - exp);
 
-                // Custo Fixo (Varre transações do mês fiscal)
-                // Isso é pesado, mas necessário para precisão
-                // O cache já tem totais, mas não por categoria. Precisamos estimar ou varrer.
-                // Vamos varrer as listas consolidadas filtrando pelo mês fiscal.
+                // Custo Fixo (Varredura)
                 let mFixed = 0;
                 const checkFixed = (list) => {
                     list.forEach(t => {
@@ -358,44 +358,40 @@ const DataService = {
 
         const avgIncome = sumIncome / 3;
         const avgFixed = sumFixed / 3;
-        // User Formula: (Média Saldo Disp - Média Fixo) / Média Saldo Disp
         const avgProjBal = sumProjBalance / 3; 
         
         let disposableRate = 0;
-        if (avgProjBal !== 0) {
-            // Se o saldo disponível médio for positivo, calculamos a taxa
-            disposableRate = ((avgProjBal - avgFixed) / avgProjBal) * 100;
-        }
+        if (avgProjBal !== 0) disposableRate = ((avgProjBal - avgFixed) / avgProjBal) * 100;
 
-        // Pareto Formatting
-        const sortedCats = Object.entries(invoiceCategories).sort((a,b) => b[1] - a[1]);
+        // Pareto Formatting (Baseado nos dados de 3 meses)
+        const sortedCats = Object.entries(paretoCategories).sort((a,b) => b[1] - a[1]);
         let paretoSum = 0;
         const paretoCats = [];
         for(const [cat, val] of sortedCats) {
             paretoCats.push({cat, val});
             paretoSum += val;
-            if(invoiceTotal > 0 && (paretoSum / invoiceTotal) >= 0.8) break;
+            // Mostra 80% do volume de 3 meses ou top 5
+            if(paretoTotal > 0 && (paretoSum / paretoTotal) >= 0.8) break; 
         }
 
         return {
             metrics: { 
-                realBalance: balBrad + balSant, // Saldo Atual (Real)
-                openInvoice: invoiceTotal,      // Fatura Aberta
-                predictedIncome: avgIncome,     // Receita Prevista
-                fixedCost: avgFixed,            // Custo Fixo Médio
+                realBalance: balBrad + balSant, 
+                openInvoice: invoiceTotal,      
+                predictedIncome: avgIncome,     
+                fixedCost: avgFixed,            
                 
                 balBrad: balBrad,
                 balSant: balSant,
-                disposableRate: disposableRate, // Taxa Calculada
+                disposableRate: disposableRate, 
                 
-                pareto: { topCats: paretoCats, totalPareto: paretoSum, totalExp: invoiceTotal },
-                heatmap: dailyExpenses
+                pareto: { topCats: paretoCats, totalPareto: paretoSum, totalExp: paretoTotal }, // Dados de 3 meses
+                heatmap: dailyExpenses // Dados de 3 meses
             },
-            categories: Object.entries(invoiceCategories).map(([k, v]) => ({ k, v, c: AppParams.colors.categories[k] || 'bg-gray-400' })).sort((a, b) => b.v - a.v)
+            categories: Object.entries(paretoCategories).map(([k, v]) => ({ k, v, c: AppParams.colors.categories[k] || 'bg-gray-400' })).sort((a, b) => b.v - a.v)
         };
     },
     
-    // Auxiliares
     getAllCategories() {
         const cats = new Set();
         if(this.bradescoTransactions) this.bradescoTransactions.forEach(t => cats.add(t.category));
@@ -415,6 +411,6 @@ const DataService = {
         }
         return { months: AppParams.months.short, categories: [], data: data };
     },
-    getGoalsStats() { return { currentBalance: 0, avgExp: 0, runway: 0 }; } // Placeholder se não usado
+    getGoalsStats() { return { currentBalance: 0, avgExp: 0, runway: 0 }; }
 };
 window.DataService = DataService;
