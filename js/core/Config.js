@@ -22,7 +22,7 @@ const AppParams = {
     },
     ignorePatterns: [
         'pagamento fatura', 'pagto fatura', 'transf conta', 'transf. para',
-        'aplicacao', 'resgate', 'pix bradesco', 'pix santander', 'transf tit', 'apl.invest fac','transfe pix des'
+        'aplicacao', 'resgate', 'pix bradesco', 'pix santander', 'transf tit', 'apl.invest fac','transfe pix des','Resgate Inv Fac'
     ],
     years: [2024, 2025, 2026],
     urls: {
@@ -38,4 +38,5 @@ const AppParams = {
     }
 };
 window.AppParams = AppParams;
+
 
