@@ -9,75 +9,82 @@ const Dashboard = {
 
     getTemplate() {
         return `
-            <div class="flex justify-between items-center mb-4">
-                <h2 class="text-lg font-semibold text-gray-700 dark:text-gray-200">Visão Mensal Geral</h2>
-                <span class="text-xs bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 px-2 py-1 rounded-full font-medium" id="current-month-badge">Carregando...</span>
+            <div class="flex justify-between items-center mb-6">
+                <div class="flex items-center gap-2">
+                    <h2 class="text-2xl font-bold text-gray-800 dark:text-white tracking-tight">Resumo Financeiro</h2>
+                </div>
+                <span class="text-xs bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 px-3 py-1.5 rounded-full font-medium shadow-sm" id="current-month-badge">Carregando...</span>
             </div>
             
-            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-                <div class="bg-white p-5 rounded-xl card-shadow border-l-4 border-indigo-500 dark:bg-gray-800 transition-theme">
+            <h3 class="text-lg font-bold text-gray-800 dark:text-white mb-4 pl-1 border-l-4 border-indigo-500">Visão Mensal Geral</h3>
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div class="bg-white p-5 rounded-xl card-shadow border border-gray-100 dark:bg-gray-800 dark:border-gray-700 transition-theme hover:shadow-md">
                     <div class="flex justify-between items-start">
                         <div>
                             <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Saldo Atual (Real)</p>
                             <h3 class="text-xl font-bold text-gray-800 mt-1 dark:text-white val-privacy" id="dash-real-balance">...</h3>
                         </div>
-                        <div class="bg-indigo-100 text-indigo-600 p-2 rounded-lg dark:bg-indigo-900/30 dark:text-indigo-400"><i class="fa-solid fa-wallet"></i></div>
+                        <div class="bg-indigo-50 text-indigo-600 p-2 rounded-lg dark:bg-indigo-900/30 dark:text-indigo-400"><i class="fa-solid fa-wallet"></i></div>
                     </div>
                 </div>
-                <div class="bg-white p-5 rounded-xl card-shadow border-l-4 border-purple-500 dark:bg-gray-800 transition-theme">
+
+                <div class="bg-white p-5 rounded-xl card-shadow border border-gray-100 dark:bg-gray-800 dark:border-gray-700 transition-theme hover:shadow-md">
                     <div class="flex justify-between items-start">
                         <div>
                             <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Fatura Aberta</p>
                             <h3 class="text-xl font-bold text-gray-800 mt-1 dark:text-white val-privacy" id="dash-open-invoice">...</h3>
                         </div>
-                        <div class="bg-purple-100 text-purple-600 p-2 rounded-lg dark:bg-purple-900/30 dark:text-purple-400"><i class="fa-brands fa-cc-mastercard"></i></div>
+                        <div class="bg-purple-50 text-purple-600 p-2 rounded-lg dark:bg-purple-900/30 dark:text-purple-400"><i class="fa-brands fa-cc-mastercard"></i></div>
                     </div>
-                    <p class="text-[10px] text-gray-400 mt-1">Passivo (16/M-1 a 15/M)</p>
+                    <p class="text-[10px] text-gray-400 mt-2 font-medium">Passivo (16/M-1 a 15/M)</p>
                 </div>
-                <div class="bg-white p-5 rounded-xl card-shadow border-l-4 border-emerald-500 dark:bg-gray-800 transition-theme">
+
+                <div class="bg-white p-5 rounded-xl card-shadow border border-gray-100 dark:bg-gray-800 dark:border-gray-700 transition-theme hover:shadow-md">
                     <div class="flex justify-between items-start">
                         <div>
                             <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Receita Prevista</p>
                             <h3 class="text-xl font-bold text-gray-800 mt-1 dark:text-white val-privacy" id="dash-predicted-income">...</h3>
                         </div>
-                        <div class="bg-emerald-100 text-emerald-600 p-2 rounded-lg dark:bg-emerald-900/30 dark:text-emerald-400"><i class="fa-solid fa-arrow-trend-up"></i></div>
+                        <div class="bg-emerald-50 text-emerald-600 p-2 rounded-lg dark:bg-emerald-900/30 dark:text-emerald-400"><i class="fa-solid fa-arrow-trend-up"></i></div>
                     </div>
-                    <p class="text-[10px] text-gray-400 mt-1">Média últimos 3 meses</p>
+                    <p class="text-[10px] text-gray-400 mt-2 font-medium">Média últimos 3 meses</p>
                 </div>
-                <div class="bg-white p-5 rounded-xl card-shadow border-l-4 border-orange-400 dark:bg-gray-800 transition-theme">
+
+                <div class="bg-white p-5 rounded-xl card-shadow border border-gray-100 dark:bg-gray-800 dark:border-gray-700 transition-theme hover:shadow-md">
                     <div class="flex justify-between items-start">
                         <div>
                             <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Custo Fixo Médio</p>
                             <h3 class="text-xl font-bold text-gray-800 mt-1 dark:text-white val-privacy" id="dash-fixed-cost">...</h3>
                         </div>
-                        <div class="bg-orange-100 text-orange-600 p-2 rounded-lg dark:bg-orange-900/30 dark:text-orange-400"><i class="fa-solid fa-house-chimney"></i></div>
+                        <div class="bg-orange-50 text-orange-600 p-2 rounded-lg dark:bg-orange-900/30 dark:text-orange-400"><i class="fa-solid fa-house-chimney"></i></div>
                     </div>
-                    <p class="text-[10px] text-gray-400 mt-1">Aluguel, Luz, Internet...</p>
+                    <p class="text-[10px] text-gray-400 mt-2 font-medium">Aluguel, Luz, Internet...</p>
                 </div>
             </div>
 
-            <h3 class="font-semibold text-gray-700 dark:text-gray-200 mb-3 px-1">Saldo em Contas & Saúde</h3>
-            
-            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
-                <div class="bg-white p-4 rounded-xl card-shadow dark:bg-gray-800 transition-theme flex items-center justify-between border-l-4 border-red-600">
+            <h3 class="text-lg font-bold text-gray-800 dark:text-white mt-8 mb-4 pl-1 border-l-4 border-blue-500">Saldo em Contas & Saúde</h3>
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div class="bg-white p-4 rounded-xl card-shadow dark:bg-gray-800 transition-theme flex items-center justify-between border-l-4 border-red-600 hover:shadow-md">
                     <div>
                         <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Bradesco</p>
                         <h3 class="text-lg font-bold text-gray-800 dark:text-white val-privacy" id="dash-bal-bradesco">...</h3>
                     </div>
-                    <i class="fa-solid fa-building-columns text-red-600 text-xl opacity-50"></i>
+                    <i class="fa-solid fa-building-columns text-red-600 text-xl opacity-20"></i>
                 </div>
-                <div class="bg-white p-4 rounded-xl card-shadow dark:bg-gray-800 transition-theme flex items-center justify-between border-l-4 border-rose-600">
+
+                <div class="bg-white p-4 rounded-xl card-shadow dark:bg-gray-800 transition-theme flex items-center justify-between border-l-4 border-rose-600 hover:shadow-md">
                     <div>
                         <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Santander</p>
                         <h3 class="text-lg font-bold text-gray-800 dark:text-white val-privacy" id="dash-bal-santander">...</h3>
                     </div>
-                    <i class="fa-solid fa-building-columns text-rose-600 text-xl opacity-50"></i>
+                    <i class="fa-solid fa-building-columns text-rose-600 text-xl opacity-20"></i>
                 </div>
-                <div class="bg-white p-4 rounded-xl card-shadow dark:bg-gray-800 transition-theme flex items-center justify-between border-l-4 border-blue-500">
+
+                <div class="bg-white p-4 rounded-xl card-shadow dark:bg-gray-800 transition-theme flex items-center justify-between border-l-4 border-blue-500 hover:shadow-md">
                     <div>
                         <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Taxa Renda Disp.</p>
                         <h3 class="text-lg font-bold text-gray-800 dark:text-white val-privacy" id="dash-disposable-rate">...</h3>
-                        <p class="text-[9px] text-gray-400 mt-0.5">(Saldo Disp - Fixo) / Saldo Disp</p>
+                        <p class="text-[9px] text-gray-400 mt-0.5 font-medium">Margem após fixos</p>
                     </div>
                     <div class="h-8 w-8 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center dark:bg-blue-900/30 dark:text-blue-400">
                         <i class="fa-solid fa-percent"></i>
@@ -85,45 +92,55 @@ const Dashboard = {
                 </div>
             </div>
 
-            <div class="mt-6 mb-3 px-1">
-                <h3 class="font-semibold text-gray-700 dark:text-gray-200">Análise de Comportamento (Padrões)</h3>
-                <p class="text-[10px] text-gray-400">Análise dos últimos 3 meses</p>
+            <h3 class="text-lg font-bold text-gray-800 dark:text-white mt-8 mb-4 pl-1 border-l-4 border-rose-500">Inflação Pessoal - Fatura Santander</h3>
+            <div class="bg-white p-5 rounded-xl card-shadow border border-gray-100 dark:bg-gray-800 dark:border-gray-700 transition-theme w-full">
+                <div class="mb-4 flex justify-between items-end">
+                     <div>
+                        <p class="text-[10px] text-gray-400 uppercase tracking-wider font-bold mb-1">Evolução de Categorias</p>
+                        <p class="text-xs text-gray-500 dark:text-gray-400">Histórico das últimas 12 faturas fechadas (Apenas consumo real)</p>
+                     </div>
+                 </div>
+                 <div class="w-full h-64 val-privacy"><canvas id="inflationChart"></canvas></div>
+            </div>
+
+            <div class="mt-8 mb-4 pl-1 border-l-4 border-purple-500">
+                <h3 class="text-lg font-bold text-gray-800 dark:text-white">Análise de Comportamento (Padrões)</h3>
+                <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Análise consolidada dos últimos 3 meses</p>
             </div>
             
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div class="bg-white p-5 rounded-xl card-shadow dark:bg-gray-800 transition-theme">
                     <div class="flex justify-between items-start mb-2">
                         <div>
-                            <h4 class="text-sm font-bold text-gray-700 dark:text-gray-200">Princípio de Pareto (80/20) - Cartões</h4>
-                            <p class="text-[10px] text-gray-400 mt-0.5">Categorias que mais impactam seu orçamento</p>
+                            <h4 class="text-sm font-bold text-gray-700 dark:text-gray-200">Princípio de Pareto (80/20)</h4>
+                            <p class="text-[10px] text-gray-400 mt-0.5">Onde seu dinheiro realmente vai</p>
                         </div>
-                        <div class="bg-indigo-100 text-indigo-600 p-1.5 rounded-lg text-xs dark:bg-indigo-900/30 dark:text-indigo-400"><i class="fa-solid fa-chart-pie"></i></div>
+                        <div class="bg-indigo-50 text-indigo-600 p-1.5 rounded-lg text-xs dark:bg-indigo-900/30 dark:text-indigo-400"><i class="fa-solid fa-chart-pie"></i></div>
                     </div>
                     <div id="pareto-content" class="mt-4 val-privacy text-xs text-gray-400">Carregando dados...</div>
                 </div>
+                
                 <div class="bg-white p-5 rounded-xl card-shadow dark:bg-gray-800 transition-theme">
                     <div class="flex justify-between items-start mb-2">
                          <div>
                              <h4 class="text-sm font-bold text-gray-700 dark:text-gray-200">Mapa de Calor de Gastos</h4>
-                            <p class="text-[10px] text-gray-400 mt-0.5">Concentração de saídas por dia do mês</p>
+                            <p class="text-[10px] text-gray-400 mt-0.5">Concentração de saídas por dia</p>
                         </div>
-                        <div class="bg-orange-100 text-orange-600 p-1.5 rounded-lg text-xs dark:bg-orange-900/30 dark:text-orange-400"><i class="fa-solid fa-fire"></i></div>
+                        <div class="bg-orange-50 text-orange-600 p-1.5 rounded-lg text-xs dark:bg-orange-900/30 dark:text-orange-400"><i class="fa-solid fa-fire"></i></div>
                     </div>
                     <div id="heatmap-container" class="grid grid-cols-7 gap-1 mt-2 val-privacy text-xs text-gray-400">Carregando dados...</div>
                  </div>
             </div>
 
             <div class="mt-6 bg-white p-5 rounded-xl card-shadow dark:bg-gray-800 transition-theme">
-                <div class="flex justify-between items-center mb-4"><h3 class="font-semibold text-gray-700 dark:text-gray-200">Ritmo de Gastos (Evolução Semanal)</h3><button onclick="Handlers.switchTab('expenses')" class="text-xs text-blue-600 hover:text-blue-700 font-medium dark:text-blue-400 transition-colors">Ver detalhes</button></div>
+                <div class="flex justify-between items-center mb-4">
+                    <div>
+                        <h4 class="text-sm font-bold text-gray-700 dark:text-gray-200">Ritmo de Gastos (Evolução Semanal)</h4>
+                        <p class="text-[10px] text-gray-400 mt-0.5">Velocidade do consumo no mês atual</p>
+                    </div>
+                    <button onclick="Handlers.switchTab('expenses')" class="text-xs text-blue-600 hover:text-blue-700 font-medium dark:text-blue-400 transition-colors">Ver detalhes</button>
+                </div>
                 <div id="weekly-chart-container" class="w-full h-40 flex items-end justify-between gap-4 px-4 val-privacy">Carregando dados...</div>
-            </div>
-            
-            <div class="mt-6 bg-white p-5 rounded-xl card-shadow border border-gray-100 dark:bg-gray-800 dark:border-gray-700 transition-theme w-full">
-                <div class="mb-4">
-                     <h4 class="text-sm font-bold text-gray-700 dark:text-gray-200">Inflação Pessoal - Fatura Santander</h4>
-                     <p class="text-[10px] text-gray-400">Evolução de categorias das últimas 12 faturas fechadas</p>
-                 </div>
-                 <div class="w-full h-64 val-privacy"><canvas id="inflationChart"></canvas></div>
             </div>
         `;
     },
@@ -240,10 +257,7 @@ const Dashboard = {
 
         this.renderWeeklyChart(stats.metrics.weeklyPace);
 
-        // --- ATUALIZAÇÃO AQUI ---
-        // Pega os dados das últimas 12 faturas fechadas
         const inflationData = DataService.getLast12ClosedInvoicesBreakdown();
-        // Renderiza o gráfico
         setTimeout(() => ChartManager.renderInflation(year, inflationData), 0);
     }
 };
