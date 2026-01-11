@@ -244,10 +244,7 @@ const Dashboard = {
             }).join('');
         }
 
-        stats.categories.forEach(cat => { cat.c = UI.getCategoryColor(cat.k); });
-        this.renderBlockChart(stats.categories);
-
-        // Renderiza o novo gráfico de Ritmo Semanal
+        // --- CORREÇÃO: Chamada apenas do novo gráfico ---
         this.renderWeeklyChart(stats.metrics.weeklyPace);
 
         const inflationData = DataService.getYearlyCategoryBreakdown(year);
