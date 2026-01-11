@@ -1,4 +1,5 @@
 const DataService = {
+    // ... (Init, fetch, parsers e outros métodos mantidos iguais) ...
     bradescoTransactions: [], 
     santanderAccountTransactions: [], 
     santanderCardTransactions: [],
@@ -9,7 +10,6 @@ const DataService = {
     notify() { this.listeners.forEach(fn => fn(this)); },
 
     async init() {
-        // ... (Init mantido igual) ...
         console.log("🚀 DataService: Iniciando...");
         Utils.DOM.updateText('current-month-badge', 'Sincronizando Bancos...');
 
@@ -56,12 +56,11 @@ const DataService = {
         }
     },
 
-    // --- PARSERS (Mantidos) ---
+    // --- PARSERS MANTIDOS ---
     parseBankStatement(text, sourceLabel) {
         if (!text || typeof text !== 'string') return [];
         const rows = text.split('\n').map(r => r.trim()).filter(r => r);
         if (rows.length < 2) return [];
-        
         const headers = rows[0].toLowerCase().split('\t');
         const idx = {
             date: headers.findIndex(h => h.includes('data')),
@@ -69,26 +68,21 @@ const DataService = {
             val: headers.findIndex(h => h.includes('valor')),
             bal: headers.findIndex(h => h.includes('saldo'))
         };
-
         return rows.slice(1).map(row => {
             const cols = row.split('\t');
             if(cols.length < 3) return null;
-
             let date = new Date();
             const dStr = cols[idx.date];
             if(dStr && dStr.match(/^\d{2}\/\d{2}\/\d{2,4}/)) {
                 const [d, m, y] = dStr.split('/');
                 date = new Date(y.length===2 ? '20'+y : y, m-1, d);
             }
-
             const val = idx.val > -1 ? Utils.parseMoney(cols[idx.val]) : 0;
             const bal = idx.bal > -1 ? Utils.parseMoney(cols[idx.bal]) : 0;
             const desc = (idx.desc > -1 ? cols[idx.desc] : '').replace(/"/g, '');
-            
             let cat = 'Outros';
             if(val > 0) cat = 'Receita';
             else if(desc.toLowerCase().includes('pix')) cat = 'Pix';
-            
             return {
                 date, description: desc, value: val, balance: bal,
                 category: cat, source: sourceLabel, type: val >= 0 ? 'income' : 'expense'
@@ -111,14 +105,12 @@ const DataService = {
         const rows = text.split('\n').map(r => r.trim()).filter(r => r);
         if (rows.length < 2) return;
         const headers = rows[0].toLowerCase().split('\t');
-        
         const idx = {
             date: headers.findIndex(h => h.includes('data')),
             val: headers.findIndex(h => h.includes('valor')),
             cat: headers.findIndex(h => h.includes('categ') || h.includes('ramo')),
             desc: headers.findIndex(h => h.includes('desc'))
         };
-        
         this.santanderCardTransactions = rows.slice(1).map(row => {
             const cols = row.split('\t');
             let date = new Date();
@@ -131,7 +123,6 @@ const DataService = {
             }
             const val = idx.val > -1 ? Utils.parseMoney(cols[idx.val]) : 0;
             const desc = idx.desc > -1 ? cols[idx.desc].replace(/"/g, '') : 'Santander';
-            
             return {
                 date, description: desc, value: val,
                 category: idx.cat > -1 ? cols[idx.cat] : 'Cartão', source: 'santander_card',
@@ -154,6 +145,7 @@ const DataService = {
     },
 
     buildCache() {
+        // ... (Mantido igual: Cache, FiscalPeriod, Processamento) ...
         this.monthlyDataCache = {};
         AppParams.years.forEach(y => {
             this.monthlyDataCache[y] = { 
@@ -221,7 +213,6 @@ const DataService = {
                 const key = `${y}-${m}`;
                 if (balances.bradesco[key] !== undefined) lastBrad = balances.bradesco[key];
                 if (balances.santander[key] !== undefined) lastSant = balances.santander[key];
-                
                 this.monthlyDataCache[y].balances[m] = lastBrad + lastSant;
                 this.monthlyDataCache[y].balancesSantander[m] = lastSant;
             }
@@ -231,17 +222,15 @@ const DataService = {
     getMonthly(year) { return this.monthlyDataCache[year]; },
     getLatestPeriod() { const now = new Date(); return { year: now.getFullYear(), month: now.getMonth() }; },
 
+    // Métodos Aggregated e Consolidated mantidos...
     getAggregated(year, isMonthly, indices, sourceFilter = 'all') {
         const d = this.getMonthly(year);
         if (!d) return { income: [], expenses: [], balances: [], balancesSantander: [], labels: [] };
-        
         let srcInc = d.income; let srcExp = d.expenses;
         if (sourceFilter === 'account') { srcInc = d.acc.income; srcExp = d.acc.expenses; }
         else if (sourceFilter === 'card') { srcInc = d.card.income; srcExp = d.card.expenses; }
-
         let income=[], expenses=[], balances=[], balancesSantander=[], labels=[];
         const sum = (arr) => arr.reduce((a, b) => a + b, 0);
-
         if (isMonthly) {
             indices.forEach(i => {
                 income.push(srcInc[i]); expenses.push(srcExp[i]); 
@@ -270,82 +259,84 @@ const DataService = {
     
     // --- LÓGICA DO DASHBOARD ---
     getDashboardStats(year, month) {
-        // 1. Saldos Individuais
         let balBrad = 0, balSant = 0;
         if (this.bradescoTransactions.length > 0) balBrad = this.bradescoTransactions[0].balance;
         if (this.santanderAccountTransactions.length > 0) balSant = this.santanderAccountTransactions[0].balance;
         
-        // --- JANELA ATUAL (Para Cards de Fatura) ---
-        // 16/M-1 a 15/M
+        // Datas
         let startM = month - 1; let startY = year;
         if (startM < 0) { startM = 11; startY--; }
         const currentStartDate = new Date(startY, startM, 16);
         const endDate = new Date(year, month, 15, 23, 59, 59);
-
-        // --- JANELA DE PADRÕES (3 Meses) ---
-        // 16/M-3 a 15/M
-        let patternStartM = month - 3; let patternStartY = year;
-        // Ajuste de ano (JS handle negative months in date constructor automatically, but being explicit is safer)
         const patternStartDate = new Date(year, month - 3, 16); 
 
-        // 2. Acumulação
-        let invoiceTotal = 0; // Apenas mês atual
-        let paretoTotal = 0;  // 3 meses
-        let paretoCategories = {}; // 3 meses
-        const dailyExpenses = new Array(31).fill(0); // 3 meses (acumula por dia do mês 1-31)
+        let invoiceTotal = 0; let paretoTotal = 0; let paretoCategories = {}; 
+        const dailyExpenses = new Array(31).fill(0); 
+        
+        // NOVO: Ritmo Semanal (Mês Civil Atual)
+        const weeklyStats = [0, 0, 0, 0];
 
-        if (this.santanderCardTransactions) {
-            this.santanderCardTransactions.forEach(t => {
+        // Processamento de Transações
+        const processStats = (list) => {
+            if(!list) return;
+            list.forEach(t => {
                 if (t.type !== 'expense' || AppParams.ignorePatterns.some(p => t.description.toLowerCase().includes(p))) return;
                 const val = Math.abs(t.value);
 
-                // Lógica: Fatura Aberta (Mês Atual Estrito)
+                // Fatura
                 if (t.date >= currentStartDate && t.date <= endDate) {
-                    invoiceTotal += val;
+                    if(t.source === 'santander_card') {
+                        invoiceTotal += val;
+                    }
                 }
 
-                // Lógica: Padrões (3 Meses)
+                // Padrões (3 Meses)
                 if (t.date >= patternStartDate && t.date <= endDate) {
-                    paretoTotal += val;
-                    const cat = t.category || 'Outros';
-                    paretoCategories[cat] = (paretoCategories[cat] || 0) + val;
-                    
-                    // Heatmap (Dia 1 a 31)
+                    if(t.source === 'santander_card') {
+                        paretoTotal += val;
+                        const cat = t.category || 'Outros';
+                        paretoCategories[cat] = (paretoCategories[cat] || 0) + val;
+                        const d = t.date.getDate();
+                        if(d <= 31) dailyExpenses[d-1] += val;
+                    }
+                }
+
+                // Ritmo Semanal (Mês Civil para controle de Fluxo)
+                // Considera TUDO (Contas + Cartão) no mês atual
+                if (t.date.getMonth() === month && t.date.getFullYear() === year) {
                     const d = t.date.getDate();
-                    if(d <= 31) dailyExpenses[d-1] += val;
+                    if (d <= 7) weeklyStats[0] += val;
+                    else if (d <= 14) weeklyStats[1] += val;
+                    else if (d <= 21) weeklyStats[2] += val;
+                    else weeklyStats[3] += val;
                 }
             });
-        }
+        };
 
-        // 3. Cálculos de Média (Últimas 3 Janelas para Cards)
-        let sumIncome = 0;
-        let sumFixed = 0;
-        let sumProjBalance = 0;
+        processStats(this.santanderCardTransactions);
+        processStats(this.bradescoTransactions);
+        processStats(this.santanderAccountTransactions);
+
+        // Médias
+        let sumIncome = 0; let sumFixed = 0; let sumProjBalance = 0;
         const fixedCats = ['aluguel', 'luz', 'internet', 'streaming', 'sem parar', 'transporte'];
-        
         for (let i = 1; i <= 3; i++) {
             let y = year, m = month - i;
             if (m < 0) { m += 12; y--; }
-            
             const d = this.getMonthly(y);
             if (d) {
-                const inc = d.income[m];
-                sumIncome += inc;
+                const inc = d.income[m]; sumIncome += inc;
+                const exp = d.expenses[m]; sumProjBalance += (inc - exp);
                 
-                const exp = d.expenses[m];
-                sumProjBalance += (inc - exp);
-
-                // Custo Fixo (Varredura)
+                // Estimativa rápida de fixo pelo cache (assumindo proporção ou varredura)
+                // Mantendo a varredura para precisão
                 let mFixed = 0;
                 const checkFixed = (list) => {
                     list.forEach(t => {
                         const fp = (t.date.getDate() >= 16) ? (t.date.getMonth() + 1) % 12 : t.date.getMonth();
                         const fy = (t.date.getDate() >= 16 && t.date.getMonth() === 11) ? t.date.getFullYear() + 1 : t.date.getFullYear();
-                        
-                        if (fp === m && fy === y && t.type === 'expense') {
-                            if (fixedCats.includes(t.category.toLowerCase())) {
-                                mFixed += Math.abs(t.value);
-                            }
+                        if (fp === m && fy === y && t.type === 'expense' && fixedCats.includes(t.category.toLowerCase())) {
+                            mFixed += Math.abs(t.value);
                         }
                     });
                 };
@@ -359,18 +350,15 @@ const DataService = {
         const avgIncome = sumIncome / 3;
         const avgFixed = sumFixed / 3;
         const avgProjBal = sumProjBalance / 3; 
-        
         let disposableRate = 0;
         if (avgProjBal !== 0) disposableRate = ((avgProjBal - avgFixed) / avgProjBal) * 100;
 
-        // Pareto Formatting (Baseado nos dados de 3 meses)
         const sortedCats = Object.entries(paretoCategories).sort((a,b) => b[1] - a[1]);
         let paretoSum = 0;
         const paretoCats = [];
         for(const [cat, val] of sortedCats) {
             paretoCats.push({cat, val});
             paretoSum += val;
-            // Mostra 80% do volume de 3 meses ou top 5
             if(paretoTotal > 0 && (paretoSum / paretoTotal) >= 0.8) break; 
         }
 
@@ -380,18 +368,18 @@ const DataService = {
                 openInvoice: invoiceTotal,      
                 predictedIncome: avgIncome,     
                 fixedCost: avgFixed,            
-                
                 balBrad: balBrad,
                 balSant: balSant,
                 disposableRate: disposableRate, 
-                
-                pareto: { topCats: paretoCats, totalPareto: paretoSum, totalExp: paretoTotal }, // Dados de 3 meses
-                heatmap: dailyExpenses // Dados de 3 meses
+                pareto: { topCats: paretoCats, totalPareto: paretoSum, totalExp: paretoTotal },
+                heatmap: dailyExpenses,
+                weeklyPace: weeklyStats // [W1, W2, W3, W4]
             },
             categories: Object.entries(paretoCategories).map(([k, v]) => ({ k, v, c: AppParams.colors.categories[k] || 'bg-gray-400' })).sort((a, b) => b.v - a.v)
         };
     },
     
+    // Auxiliares mantidos
     getAllCategories() {
         const cats = new Set();
         if(this.bradescoTransactions) this.bradescoTransactions.forEach(t => cats.add(t.category));
@@ -403,9 +391,11 @@ const DataService = {
         if(this.santanderCardTransactions) {
             this.santanderCardTransactions.forEach(t => {
                 if (t.date.getFullYear() === year && t.type === 'expense') {
-                    const m = t.date.getMonth();
-                    const cat = t.category || 'Outros';
-                    data[m][cat] = (data[m][cat] || 0) + Math.abs(t.value);
+                    if (!AppParams.ignorePatterns.some(p => t.description.toLowerCase().includes(p))) {
+                        const m = t.date.getMonth();
+                        const cat = t.category || 'Outros';
+                        data[m][cat] = (data[m][cat] || 0) + Math.abs(t.value);
+                    }
                 }
             });
         }
