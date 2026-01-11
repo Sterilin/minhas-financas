@@ -62,8 +62,15 @@ const Report = {
     // --- Lógica de Gráficos ---
     updateCharts() {
         const viewType = Utils.DOM.getValue('filter-view');
+        const sourceFilter = Utils.DOM.getValue('filter-source');
         const isMonthly = viewType === 'monthly';
+        
+        // Estrutura para o gráfico visual (Fluxo de Caixa)
         const data = { labels: [], years: [], inc: [], exp: [], bal: [] };
+        
+        // Estrutura separada para a Projeção (Sempre Conjunta)
+        const projectionData = { labels: [], years: [], bal: [] };
+
         let isCustom = false;
         const fullCount = isMonthly ? 12 : 4;
 
@@ -71,18 +78,34 @@ const Report = {
             const indices = AppState.reportSelections[y] || [];
             if (indices.length > 0 && indices.length < fullCount) isCustom = true;
             
-            const res = DataService.getAggregated(y, isMonthly, indices);
+            const res = DataService.getAggregated(y, isMonthly, indices, sourceFilter);
+            
             res.labels.forEach((l, i) => {
+                // Filtra zeros apenas para o visual
                 if (res.income[i] === 0 && res.expenses[i] === 0 && res.balances[i] === 0) return;
+                
+                // Dados para o Gráfico Fluxo de Caixa (Usa Santander apenas para a linha de saldo)
                 data.labels.push(l); data.years.push(y); 
-                data.inc.push(res.income[i]); data.exp.push(res.expenses[i]); data.bal.push(res.balances[i]);
+                data.inc.push(res.income[i]); 
+                data.exp.push(res.expenses[i]); 
+                data.bal.push(res.balancesSantander[i]); // <--- AQUI: Usa Saldo Santander Específico
+
+                // Dados para Projeção (Usa Saldo Conjunto)
+                projectionData.labels.push(l);
+                projectionData.years.push(y);
+                projectionData.bal.push(res.balances[i]); // <--- AQUI: Usa Saldo Conjunto
             });
         });
 
         const maxVisible = 12;
+        // Slice para visualização
         if (data.labels.length > maxVisible) {
             const s = data.labels.length - maxVisible;
             ['labels', 'years', 'inc', 'exp', 'bal'].forEach(k => data[k] = data[k].slice(s));
+            // Sincroniza projectionData com a view visual (opcional, mas bom para consistência do eixo X)
+            projectionData.labels = projectionData.labels.slice(s);
+            projectionData.years = projectionData.years.slice(s);
+            projectionData.bal = projectionData.bal.slice(s);
         }
 
         let statusText = "";
@@ -90,33 +113,36 @@ const Report = {
         else if (isCustom) statusText = "Exibindo combinação personalizada";
         else if (data.labels.length > maxVisible) statusText = `*Exibindo os ${maxVisible} períodos mais recentes`;
         else statusText = `Visualizando ${data.labels.length} ${isMonthly ? 'meses' : 'trimestres'}`;
+        
+        if(sourceFilter !== 'all') {
+            statusText += ` (${sourceFilter === 'account' ? 'Somente Conta' : 'Somente Fatura'})`;
+        }
+
         Utils.DOM.updateText('chart-status-text', statusText);
 
+        // Renderiza Gráfico Principal (Saldo Santander)
         ChartManager.renderReport(data);
         
-        // CÁLCULOS ATUALIZADOS
         const tInc = data.inc.reduce((a,b)=>a+b,0);
         const tExp = data.exp.reduce((a,b)=>a+b,0);
         
-        // Correção: O Saldo do Período agora reflete o SALDO FINAL (último ponto do gráfico/coluna Saldo)
-        // e não mais o fluxo líquido (Receita - Despesa) do período.
+        // Card de Saldo do Período: Exibe o saldo conjunto ou Santander? 
+        // Se o gráfico mostra Santander, o card deve mostrar Santander para ser consistente.
         const finalBalance = data.bal.length > 0 ? data.bal[data.bal.length - 1] : 0;
         
-        // Para o cálculo da taxa de poupança, mantemos o fluxo líquido (quanto sobrou do que entrou neste período)
         const netFlow = tInc - tExp;
 
         Utils.DOM.updateText('total-gains', Utils.formatCurrency(tInc));
         Utils.DOM.updateText('total-costs', Utils.formatCurrency(tExp));
-        
-        // Atualiza o visualizador com o Saldo Final Real
         Utils.DOM.updateText('yearly-balance', Utils.formatCurrency(finalBalance));
-        
         Utils.DOM.updateText('avg-savings', tInc>0 ? ((netFlow/tInc)*100).toFixed(1) + '%' : '0%');
 
-        this.updateProjection(data);
+        // Renderiza Projeção (Saldo Conjunto)
+        this.updateProjection(projectionData);
     },
 
     updateProjection(histData) {
+        // histData.bal aqui contém o SALDO CONJUNTO
         const sliderVal = parseInt(Utils.DOM.getValue('projection-slider')) || 6;
         const viewType = Utils.DOM.getValue('filter-view');
         const lastVisibleVal = histData.bal.length > 0 ? histData.bal[histData.bal.length - 1] : 0;
@@ -126,7 +152,16 @@ const Report = {
             trend = (lastVisibleVal - histData.bal[0]) / (histData.bal.length - 1);
         }
         const stdDev = Math.max(Math.abs(lastVisibleVal) * 0.1, 100);
-        let pData = { labels: [...histData.labels], years: [...histData.years], hist: [...histData.bal], proj: Array(histData.bal.length).fill(null), up: Array(histData.bal.length).fill(null), low: Array(histData.bal.length).fill(null) };
+        
+        // Estrutura para o ChartManager
+        let pData = { 
+            labels: [...histData.labels], 
+            years: [...histData.years], 
+            hist: [...histData.bal], 
+            proj: Array(histData.bal.length).fill(null), 
+            up: Array(histData.bal.length).fill(null), 
+            low: Array(histData.bal.length).fill(null) 
+        };
         
         if(pData.hist.length > 0) {
             const idx = pData.hist.length - 1;
@@ -173,7 +208,7 @@ const Report = {
                     <span class="text-sm font-bold text-gray-700 dark:text-white">${Utils.formatCurrency(val)}</span>
                     <span class="text-xs font-bold ${pct >= 0 ? 'text-emerald-500' : 'text-rose-500'}">${pct >= 0 ? '+' : ''}${pct.toFixed(1)}%</span>
                 </div>
-                <div class="text-[9px] text-gray-400 mt-1">vs Saldo Atual</div>
+                <div class="text-[9px] text-gray-400 mt-1">vs Saldo Conjunto Atual</div>
             </div>`;
         Utils.DOM.updateHTML('projection-analysis', 
             formatCard('Cenário Base', finalProj, calcPct(finalProj, startVal)) +
