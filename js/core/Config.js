@@ -29,7 +29,8 @@ const AppParams = {
         'resgate', 
         'pix bradesco', 
         'pix santander',
-        'transf tit'
+        'transf tit',
+        'apl.invest fac' // Novo termo adicionado
     ],
     years: [2024, 2025, 2026],
     urls: {
