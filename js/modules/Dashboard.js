@@ -24,7 +24,6 @@ const Dashboard = {
                         <div class="bg-indigo-100 text-indigo-600 p-2 rounded-lg dark:bg-indigo-900/30 dark:text-indigo-400"><i class="fa-solid fa-wallet"></i></div>
                     </div>
                 </div>
-
                 <div class="bg-white p-5 rounded-xl card-shadow border-l-4 border-purple-500 dark:bg-gray-800 transition-theme">
                     <div class="flex justify-between items-start">
                         <div>
@@ -35,7 +34,6 @@ const Dashboard = {
                     </div>
                     <p class="text-[10px] text-gray-400 mt-1">Passivo (16/M-1 a 15/M)</p>
                 </div>
-
                 <div class="bg-white p-5 rounded-xl card-shadow border-l-4 border-emerald-500 dark:bg-gray-800 transition-theme">
                     <div class="flex justify-between items-start">
                         <div>
@@ -46,7 +44,6 @@ const Dashboard = {
                     </div>
                     <p class="text-[10px] text-gray-400 mt-1">Média últimos 3 meses</p>
                 </div>
-
                 <div class="bg-white p-5 rounded-xl card-shadow border-l-4 border-orange-400 dark:bg-gray-800 transition-theme">
                     <div class="flex justify-between items-start">
                         <div>
@@ -69,7 +66,6 @@ const Dashboard = {
                     </div>
                     <i class="fa-solid fa-building-columns text-red-600 text-xl opacity-50"></i>
                 </div>
-
                 <div class="bg-white p-4 rounded-xl card-shadow dark:bg-gray-800 transition-theme flex items-center justify-between border-l-4 border-rose-600">
                     <div>
                         <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Santander</p>
@@ -77,7 +73,6 @@ const Dashboard = {
                     </div>
                     <i class="fa-solid fa-building-columns text-rose-600 text-xl opacity-50"></i>
                 </div>
-
                 <div class="bg-white p-4 rounded-xl card-shadow dark:bg-gray-800 transition-theme flex items-center justify-between border-l-4 border-blue-500">
                     <div>
                         <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Taxa Renda Disp.</p>
@@ -106,7 +101,6 @@ const Dashboard = {
                     </div>
                     <div id="pareto-content" class="mt-4 val-privacy text-xs text-gray-400">Carregando dados...</div>
                 </div>
-                
                 <div class="bg-white p-5 rounded-xl card-shadow dark:bg-gray-800 transition-theme">
                     <div class="flex justify-between items-start mb-2">
                          <div>
@@ -127,7 +121,7 @@ const Dashboard = {
             <div class="mt-6 bg-white p-5 rounded-xl card-shadow border border-gray-100 dark:bg-gray-800 dark:border-gray-700 transition-theme w-full">
                 <div class="mb-4">
                      <h4 class="text-sm font-bold text-gray-700 dark:text-gray-200">Inflação Pessoal - Fatura Santander</h4>
-                     <p class="text-[10px] text-gray-400">Evolução de categorias mês a mês (Apenas Gastos de Fatura)</p>
+                     <p class="text-[10px] text-gray-400">Evolução de categorias das últimas 12 faturas fechadas</p>
                  </div>
                  <div class="w-full h-64 val-privacy"><canvas id="inflationChart"></canvas></div>
             </div>
@@ -244,10 +238,12 @@ const Dashboard = {
             }).join('');
         }
 
-        // --- CORREÇÃO: Chamada apenas do novo gráfico ---
         this.renderWeeklyChart(stats.metrics.weeklyPace);
 
-        const inflationData = DataService.getYearlyCategoryBreakdown(year);
+        // --- ATUALIZAÇÃO AQUI ---
+        // Pega os dados das últimas 12 faturas fechadas
+        const inflationData = DataService.getLast12ClosedInvoicesBreakdown();
+        // Renderiza o gráfico
         setTimeout(() => ChartManager.renderInflation(year, inflationData), 0);
     }
 };
