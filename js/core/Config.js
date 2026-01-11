@@ -22,7 +22,7 @@ const AppParams = {
     },
     ignorePatterns: [
         'pagamento fatura', 'pagto fatura', 'transf conta', 'transf. para',
-        'aplicacao', 'resgate', 'pix bradesco', 'pix santander', 'transf tit', 'apl.invest fac','transfe pix des','Resgate Inv Fac'
+        'aplicacao', 'resgate', 'pix bradesco', 'pix santander', 'transf tit', 'apl.invest fac', 'transfe pix des'
     ],
     years: [2024, 2025, 2026],
     urls: {
@@ -30,13 +30,11 @@ const AppParams = {
         santanderAccount: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTfJcPWRMKT9iyUjGUs7EnCdAaqO7Z1TpHqWMT0nLSrl6TUbH43h5pKwnLHfieisnWUaHgdkYx3MAKs/pub?gid=0&single=true&output=tsv',
         santanderCard: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTfJcPWRMKT9iyUjGUs7EnCdAaqO7Z1TpHqWMT0nLSrl6TUbH43h5pKwnLHfieisnWUaHgdkYx3MAKs/pub?gid=894667076&single=true&output=tsv',
         
-        // ABA METAS (Link Fornecido)
+        // --- SEU LINK JÁ CONFIGURADO AQUI ---
         goals: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTfJcPWRMKT9iyUjGUs7EnCdAaqO7Z1TpHqWMT0nLSrl6TUbH43h5pKwnLHfieisnWUaHgdkYx3MAKs/pub?gid=202344055&single=true&output=tsv',
         
-        // Link de Edição Direta (Montado com o ID da planilha e o GID da aba Metas)
+        // Link para Editar (Abre o editor do Google)
         goalsEdit: 'https://docs.google.com/spreadsheets/d/1vTfJcPWRMKT9iyUjGUs7EnCdAaqO7Z1TpHqWMT0nLSrl6/edit#gid=202344055'
     }
 };
 window.AppParams = AppParams;
-
-
