@@ -34,8 +34,9 @@ const AppParams = {
         goals: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTfJcPWRMKT9iyUjGUs7EnCdAaqO7Z1TpHqWMT0nLSrl6TUbH43h5pKwnLHfieisnWUaHgdkYx3MAKs/pub?gid=202344055&single=true&output=tsv',
         
         // Link para Editar (Abre o editor do Google)
-        goalsEdit: 'https://docs.google.com/spreadsheets/d/1vTfJcPWRMKT9iyUjGUs7EnCdAaqO7Z1TpHqWMT0nLSrl6/edit#gid=202344055'
+        goalsEdit: 'https://docs.google.com/spreadsheets/d/1zlEPm91ldWR1RbY87TWctJIaARV6a9UpMLCNTBxQC_g/edit?usp=sharing'
     }
 };
 window.AppParams = AppParams;
+
 
