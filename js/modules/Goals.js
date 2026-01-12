@@ -54,12 +54,7 @@ const Goals = {
     render() {
         const container = Utils.DOM.get('view-goals');
         if (!container) return;
-
-        // CORREÇÃO: Força a injeção do template se o Grid novo não existir
-        // Isso remove qualquer HTML antigo que esteja "travando" a renderização
-        if (!container.querySelector('#goals-grid')) {
-            container.innerHTML = this.getTemplate();
-        }
+        if (!container.querySelector('#goals-grid')) container.innerHTML = this.getTemplate();
 
         const stats = DataService.getGoalsStats();
 
@@ -90,7 +85,7 @@ const Goals = {
     },
 
     createGoalCard(goal) {
-        // Lógica de Imagem
+        // Imagem
         let mediaHtml = '';
         if (goal.image && goal.image.startsWith('http')) {
             mediaHtml = `<img src="${goal.image}" class="w-full h-full object-cover transform hover:scale-110 transition-transform duration-700" onerror="this.src='https://placehold.co/600x400?text=Meta'">`;
@@ -99,20 +94,27 @@ const Goals = {
             mediaHtml = `<div class="w-full h-full flex items-center justify-center bg-gray-100 dark:bg-gray-700 text-gray-400 text-4xl"><i class="${iconClass}"></i></div>`;
         }
 
-        // Lógica de Datas
-        const totalMonthsNeeded = goal.monthly > 0 ? Math.ceil(goal.total / goal.monthly) : 0;
-        const monthsElapsed = totalMonthsNeeded - goal.monthsLeft;
-        
-        const today = new Date();
-        const startDate = new Date(today.getFullYear(), today.getMonth() - monthsElapsed, 1);
-        const endDate = new Date(today.getFullYear(), today.getMonth() + goal.monthsLeft, 1);
-        
-        const formatDate = (d) => `${AppParams.months.short[d.getMonth()]} ${d.getFullYear()}`;
-        const dateRange = `${formatDate(startDate)} - ${formatDate(endDate)}`;
+        // Cor da barra e texto
+        let barColor = 'bg-blue-500';
+        let barWidth = Math.min(goal.percent, 100);
+        if(goal.percent >= 100) barColor = 'bg-emerald-500';
+        else if(goal.percent < 30) barColor = 'bg-rose-500';
+        else if(goal.percent < 70) barColor = 'bg-amber-500';
+
+        // Lógica de Datas / Previsão
+        let dateRange = "Sem prazo";
+        if (goal.monthly > 0 && goal.monthsLeft > 0) {
+            const today = new Date();
+            const totalMonths = Math.ceil(goal.total / goal.monthly);
+            const start = new Date(today.getFullYear(), today.getMonth() - (totalMonths - goal.monthsLeft), 1);
+            const end = new Date(today.getFullYear(), today.getMonth() + goal.monthsLeft, 1);
+            const fmt = (d) => `${AppParams.months.short[d.getMonth()]} ${d.getFullYear()}`;
+            dateRange = `${fmt(start)} - ${fmt(end)}`;
+        }
 
         return `
         <div class="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 dark:bg-gray-800 dark:border-gray-700 flex flex-col sm:flex-row gap-5 items-stretch hover:shadow-md transition-all">
-            <div class="relative w-full sm:w-40 h-40 shrink-0 rounded-xl overflow-hidden group">
+            <div class="relative w-full sm:w-1/3 h-40 shrink-0 rounded-xl overflow-hidden group">
                 ${mediaHtml}
                 <span class="absolute bottom-2 left-2 right-2 bg-white/95 text-gray-700 text-[10px] font-bold py-1 px-2 rounded-md text-center shadow-sm backdrop-blur-sm truncate">
                     ${dateRange}
@@ -123,32 +125,36 @@ const Goals = {
                 <div class="flex justify-between items-start mb-3">
                     <h4 class="font-bold text-lg text-gray-800 dark:text-white leading-tight">${goal.title}</h4>
                     <button onclick="window.open('${AppParams.urls.goalsEdit}', '_blank')" class="text-gray-400 hover:text-indigo-600 transition-colors">
-                        <i class="fa-solid fa-ellipsis"></i>
+                        <i class="fa-solid fa-pen"></i>
                     </button>
                 </div>
 
-                <div class="grid grid-cols-2 sm:grid-cols-3 gap-y-4 gap-x-2">
+                <div class="grid grid-cols-2 gap-y-4 gap-x-6">
                     <div>
                         <p class="text-[10px] text-gray-500 dark:text-gray-400 mb-0.5">Valor total</p>
                         <p class="text-sm font-bold text-emerald-600 dark:text-emerald-400 val-privacy">${Utils.formatCurrency(goal.total)}</p>
+                        
                         <p class="text-[10px] text-gray-500 dark:text-gray-400 mt-2 mb-0.5">Valor já arrecadado</p>
                         <p class="text-sm font-bold text-emerald-600 dark:text-emerald-400 val-privacy">${Utils.formatCurrency(goal.current)}</p>
                     </div>
-                    <div>
-                        <p class="text-[10px] text-gray-500 dark:text-gray-400 mb-0.5">Valor gasto</p>
-                        <p class="text-sm font-bold text-rose-600 dark:text-rose-400 val-privacy">R$ 0,00</p>
-                        <p class="text-[10px] text-gray-500 dark:text-gray-400 mt-2 mb-0.5">Saldo em conta</p>
-                        <p class="text-sm font-bold text-emerald-600 dark:text-emerald-400 val-privacy">${Utils.formatCurrency(goal.current)}</p>
-                    </div>
+
                     <div class="sm:text-right">
-                        <p class="text-[10px] text-gray-500 dark:text-gray-400 mb-0.5">Parcelas restantes</p>
+                        <p class="text-[10px] text-gray-500 dark:text-gray-400 mb-0.5">Aporte Mensal</p>
+                        <p class="text-sm font-bold text-indigo-600 dark:text-indigo-400 val-privacy flex items-center sm:justify-end gap-1">
+                            ${Utils.formatCurrency(goal.monthly)}
+                        </p>
+
+                        <p class="text-[10px] text-gray-500 dark:text-gray-400 mt-2 mb-0.5">Parcelas restantes</p>
                         <p class="text-sm font-bold text-gray-800 dark:text-white">${goal.monthsLeft}</p>
-                        <div class="mt-3">
-                            <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5">
-                                <div class="bg-teal-400 h-2.5 rounded-full transition-all duration-1000" style="width: ${Math.min(goal.percent, 100)}%"></div>
-                            </div>
-                            <p class="text-xs font-bold text-teal-500 mt-1 text-right">${goal.percent.toFixed(1)}%</p>
-                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-4">
+                    <div class="flex justify-between text-xs mb-1">
+                        <span class="font-bold text-teal-500">${goal.percent.toFixed(1)}%</span>
+                    </div>
+                    <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5 overflow-hidden">
+                        <div class="${barColor} h-2.5 rounded-full transition-all duration-1000" style="width: ${barWidth}%"></div>
                     </div>
                 </div>
             </div>
