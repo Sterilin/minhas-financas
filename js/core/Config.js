@@ -30,10 +30,13 @@ const AppParams = {
         'pix bradesco', 
         'pix santander', 
         'transf tit', 
-        'Apl.invest Fac', 
+        'apl.invest fac', 
         'transfe pix des',
         'resgate inv fac',
-        'pix recebido pedro gioia martins' // Novo item ignorado
+        'pix recebido pedro gioia martins',
+        'apl.invest',   // Pega qualquer variação que comece com APL.INVEST
+        'invest fac',   // Pega variações de INVEST FACIL ou INVEST FAC
+        'invest.fac'    // Pega caso haja ponto entre as palavras
     ],
     years: [2024, 2025, 2026],
     urls: {
@@ -49,4 +52,3 @@ const AppParams = {
     }
 };
 window.AppParams = AppParams;
-
