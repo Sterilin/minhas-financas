@@ -68,7 +68,7 @@ const Tables = {
             
             let badge = '<span class="bg-gray-100 text-gray-700 text-[10px] px-1.5 py-0.5 rounded">Conta</span>';
             if (t.source === 'santander_card') badge = '<span class="bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400 text-[10px] px-1.5 py-0.5 rounded border border-purple-200">Cartão</span>';
-            else if (t.source === 'bradesco') badge = '<span class="bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400 text-[10px] px-1.5 py-0.5 rounded border border-red-200">Bradesco</span>';
+            else if (t.source === 'bradesco') badge = '<span class="bg-rose-100 text-rose-600 dark:bg-rose-900/30 dark:text-rose-400 text-[10px] px-1.5 py-0.5 rounded border border-red-200">Bradesco</span>';
             else if (t.source === 'santander_acc') badge = '<span class="bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400 text-[10px] px-1.5 py-0.5 rounded border border-red-200">Santander</span>';
 
             const isInc = t.value >= 0;
@@ -113,3 +113,4 @@ const Tables = {
     }
 };
 Tables.init();
+
