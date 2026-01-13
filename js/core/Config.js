@@ -21,8 +21,19 @@ const AppParams = {
         chart: { lightGrid: '#f3f4f6', darkGrid: '#374151', lightText: '#6b7280', darkText: '#9ca3af' }
     },
     ignorePatterns: [
-        'pagamento fatura', 'pagto fatura', 'transf conta', 'transf. para',
-        'aplicacao', 'resgate', 'pix bradesco', 'pix santander', 'transf tit', 'apl.invest fac', 'transfe pix des','Resgate Inv Fac','PIX RECEBIDO PEDRO GIOIA MARTINS'
+        'pagamento fatura', 
+        'pagto fatura', 
+        'transf conta', 
+        'transf. para',
+        'aplicacao', 
+        'resgate', 
+        'pix bradesco', 
+        'pix santander', 
+        'transf tit', 
+        'apl.invest fac', 
+        'transfe pix des',
+        'resgate inv fac',
+        'pix recebido pedro gioia martins' // Novo item ignorado
     ],
     years: [2024, 2025, 2026],
     urls: {
@@ -30,14 +41,11 @@ const AppParams = {
         santanderAccount: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTfJcPWRMKT9iyUjGUs7EnCdAaqO7Z1TpHqWMT0nLSrl6TUbH43h5pKwnLHfieisnWUaHgdkYx3MAKs/pub?gid=0&single=true&output=tsv',
         santanderCard: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTfJcPWRMKT9iyUjGUs7EnCdAaqO7Z1TpHqWMT0nLSrl6TUbH43h5pKwnLHfieisnWUaHgdkYx3MAKs/pub?gid=894667076&single=true&output=tsv',
         
-        // --- SEU LINK JÁ CONFIGURADO AQUI ---
+        // Link TSV da aba Metas
         goals: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTfJcPWRMKT9iyUjGUs7EnCdAaqO7Z1TpHqWMT0nLSrl6TUbH43h5pKwnLHfieisnWUaHgdkYx3MAKs/pub?gid=202344055&single=true&output=tsv',
         
-        // Link para Editar (Abre o editor do Google)
+        // Link de Edição da Planilha
         goalsEdit: 'https://docs.google.com/spreadsheets/d/1zlEPm91ldWR1RbY87TWctJIaARV6a9UpMLCNTBxQC_g/edit?usp=sharing'
     }
 };
 window.AppParams = AppParams;
-
-
-
