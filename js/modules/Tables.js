@@ -1,115 +1,140 @@
 const Tables = {
     init() {
+        this.render();
+        DataService.subscribe(() => this.render());
         document.addEventListener('tabChanged', (e) => {
-            const t = e.detail.tab;
-            if(t === 'bradesco') this.renderBradesco();
-            if(t === 'history') this.renderHistory();     // Agora exibe Conta Santander
-            if(t === 'santander') this.renderSantander(); // Agora exibe Cartão Santander
-            if(t === 'consolidated') this.renderConsolidated();
+            // Renderiza apenas se a aba ativa for uma das abas de dados/tabelas
+            if (['consolidated', 'bradesco', 'santander', 'history', 'expenses'].includes(e.detail.tab)) {
+                this.render();
+            }
         });
     },
 
-    // Renderiza Bradesco (Já configurado anteriormente, mantido para consistência)
-    renderBradesco() {
-        const tbody = Utils.DOM.get('bradesco-table-body');
-        if(!tbody) return;
-        this.renderGenericTable(tbody, DataService.bradescoTransactions);
+    render() {
+        // Verifica qual subtabela está visível e renderiza
+        if (!Utils.DOM.get('view-consolidated').classList.contains('hidden')) this.renderConsolidated();
+        if (!Utils.DOM.get('view-bradesco').classList.contains('hidden')) this.renderBradesco();
+        if (!Utils.DOM.get('view-santander').classList.contains('hidden')) this.renderSantanderCard();
+        if (!Utils.DOM.get('view-history').classList.contains('hidden')) this.renderSantanderAccount();
+        if (!Utils.DOM.get('view-expenses').classList.contains('hidden')) this.renderExpenses();
     },
 
-    // Renderiza Conta Santander
-    renderHistory() {
-        const tbody = Utils.DOM.get('history-table-body'); // ID no HTML é 'history-table-body' para a seção view-history
-        if(!tbody) return;
-        this.renderGenericTable(tbody, DataService.santanderAccountTransactions);
-    },
-
-    // Renderiza Cartão Santander
-    renderSantander() {
-        const tbody = Utils.DOM.get('santander-table-body');
-        const status = Utils.DOM.get('santander-status');
-        if(!tbody) return;
-        
-        const data = DataService.santanderCardTransactions || [];
-        if(status) status.innerText = `${data.length} registros`;
-
-        if(data.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="4" class="text-center py-4 text-xs text-gray-400">Nenhum registro encontrado.</td></tr>';
-            return;
-        }
-
-        const frag = document.createDocumentFragment();
-        data.slice(0, 100).forEach(t => {
-            const tr = document.createElement('tr');
-            tr.className = "hover:bg-gray-50 dark:hover:bg-gray-750 transition-colors";
-            const valClass = t.value > 0 ? 'text-rose-600 dark:text-rose-400' : 'text-emerald-600 dark:text-emerald-400';
-            tr.innerHTML = `<td class="px-3 py-2 whitespace-nowrap text-xs font-medium">${t.date.toLocaleDateString('pt-BR')}</td>
-                <td class="px-3 py-2 whitespace-nowrap text-sm font-semibold text-gray-700 dark:text-gray-200 truncate max-w-[200px]" title="${t.description}">${t.description}</td>
-                <td class="px-3 py-2 whitespace-nowrap text-xs text-gray-500 dark:text-gray-400">${t.category || '-'}</td>
-                <td class="px-3 py-2 whitespace-nowrap text-right text-xs font-bold ${valClass} val-privacy">${Utils.formatCurrency(Math.abs(t.value))}</td>`;
-            frag.appendChild(tr);
-        });
-        tbody.innerHTML = '';
-        tbody.appendChild(frag);
-    },
-
+    // --- TABELA CONSOLIDADA (COM CORES NA ORIGEM) ---
     renderConsolidated() {
         const tbody = Utils.DOM.get('consolidated-table-body');
-        if(!tbody) return;
+        if (!tbody) return;
+
         const data = DataService.getConsolidatedTransactions();
-        if(data.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="5" class="text-center py-4 text-xs text-gray-400">Nenhum registro consolidado encontrado.</td></tr>';
+        
+        if (data.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="5" class="px-3 py-4 text-center text-xs text-gray-400">Nenhum dado encontrado.</td></tr>';
             return;
         }
-        const frag = document.createDocumentFragment();
-        data.slice(0, 100).forEach(t => {
-            const tr = document.createElement('tr');
-            tr.className = "hover:bg-gray-50 dark:hover:bg-gray-750 transition-colors";
-            const colorClass = UI.getCategoryColor(t.category);
-            
-            let badge = '<span class="bg-gray-100 text-gray-700 text-[10px] px-1.5 py-0.5 rounded">Conta</span>';
-            if (t.source === 'santander_card') badge = '<span class="bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400 text-[10px] px-1.5 py-0.5 rounded border border-purple-200">Cartão</span>';
-            else if (t.source === 'bradesco') badge = '<span class="bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400 text-[10px] px-1.5 py-0.5 rounded border border-red-200">Bradesco</span>';
-            else if (t.source === 'santander_acc') badge = '<span class="bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400 text-[10px] px-1.5 py-0.5 rounded border border-red-200">Santander</span>';
 
-            const isInc = t.value >= 0;
+        tbody.innerHTML = data.map(t => {
+            const date = t.date.toLocaleDateString();
+            const valClass = t.value >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400';
             
-            tr.innerHTML = `<td class="px-3 py-2 whitespace-nowrap text-xs font-medium">${t.date.toLocaleDateString('pt-BR')}</td>
-                <td class="px-3 py-2 whitespace-nowrap">${badge}</td>
-                <td class="px-3 py-2 whitespace-nowrap text-sm font-semibold text-gray-700 dark:text-gray-200 truncate max-w-[150px]" title="${t.description}">${t.description}</td>
-                <td class="px-3 py-2 whitespace-nowrap text-xs text-gray-500 dark:text-gray-400"><span class="flex items-center gap-2"><span class="w-2 h-2 rounded-full ${colorClass}"></span>${t.category}</span></td>
-                <td class="px-3 py-2 whitespace-nowrap text-right text-xs font-bold ${isInc ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'} val-privacy">${Utils.formatCurrency(t.value)}</td>`;
-            frag.appendChild(tr);
-        });
-        tbody.innerHTML = '';
-        tbody.appendChild(frag);
+            // Lógica de Cores e Ícones para a Origem
+            let sourceHtml = '';
+            const s = t.sourceLabel.toLowerCase();
+            
+            if (s.includes('bradesco')) {
+                // Bradesco: Vermelho Escuro
+                sourceHtml = `<span class="font-bold text-red-700 dark:text-red-400 flex items-center gap-1"><i class="fa-solid fa-building-columns text-[10px]"></i> Bradesco</span>`;
+            } else if (s.includes('santander')) {
+                // Santander: Rose (para diferenciar)
+                const icon = s.includes('cartão') ? 'fa-brands fa-cc-mastercard' : 'fa-solid fa-building-columns';
+                sourceHtml = `<span class="font-bold text-rose-600 dark:text-rose-400 flex items-center gap-1"><i class="${icon} text-[10px]"></i> Santander</span>`;
+            } else {
+                sourceHtml = `<span class="text-gray-600 dark:text-gray-400">${t.sourceLabel}</span>`;
+            }
+
+            return `
+                <tr class="bg-white border-b hover:bg-gray-50 dark:bg-gray-800 dark:border-gray-700 dark:hover:bg-gray-700 transition-colors">
+                    <td class="px-3 py-3 font-medium text-gray-900 whitespace-nowrap dark:text-white text-xs">${date}</td>
+                    <td class="px-3 py-3 text-xs">${sourceHtml}</td>
+                    <td class="px-3 py-3 text-xs text-gray-600 dark:text-gray-300 truncate max-w-[150px]" title="${t.description}">${t.description}</td>
+                    <td class="px-3 py-3 text-xs text-gray-500 dark:text-gray-400"><span class="px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-700 border border-gray-200 dark:border-gray-600">${t.category}</span></td>
+                    <td class="px-3 py-3 text-right font-bold text-xs ${valClass} val-privacy">${Utils.formatCurrency(t.value)}</td>
+                </tr>
+            `;
+        }).join('');
     },
 
-    // Helper reutilizável para tabelas de Extrato Bancário (Bradesco e Santander Conta)
-    renderGenericTable(tbody, data) {
-        if(!data || data.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="5" class="text-center py-4 text-xs text-gray-400">Nenhum registro encontrado.</td></tr>';
+    renderBradesco() {
+        const tbody = Utils.DOM.get('bradesco-table-body');
+        if (!tbody) return;
+        const data = DataService.bradescoTransactions || [];
+        this.renderSimpleTable(tbody, data);
+    },
+
+    renderSantanderAccount() {
+        const tbody = Utils.DOM.get('history-table-body');
+        if (!tbody) return;
+        const data = DataService.santanderAccountTransactions || [];
+        this.renderSimpleTable(tbody, data);
+    },
+
+    renderSantanderCard() {
+        const tbody = Utils.DOM.get('santander-table-body');
+        if (!tbody) return;
+        
+        // No cartão, despesas são positivas no TSV original, mas queremos mostrar negativo visualmente se for gasto
+        // O DataService já normaliza isso no getConsolidated, mas a lista crua (santanderCardTransactions) pode variar.
+        // Vamos usar a lista crua, mas ajustando a cor.
+        const data = DataService.santanderCardTransactions || [];
+        
+        if (data.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="5" class="px-3 py-4 text-center text-xs text-gray-400">Nenhum dado encontrado.</td></tr>';
             return;
         }
-        const frag = document.createDocumentFragment();
-        data.slice(0, 100).forEach(t => {
-            const isIncome = t.value >= 0;
-            const badge = isIncome 
-                ? '<span class="bg-emerald-100 text-emerald-800 text-[10px] font-bold px-2 py-0.5 rounded dark:bg-emerald-900 dark:text-emerald-200">Entrada</span>' 
-                : '<span class="bg-rose-100 text-rose-800 text-[10px] font-bold px-2 py-0.5 rounded dark:bg-rose-900 dark:text-rose-200">Saída</span>';
-            
-            const tr = document.createElement('tr');
-            tr.className = "hover:bg-gray-50 dark:hover:bg-gray-750 transition-colors";
-            tr.innerHTML = `
-                <td class="px-3 py-2 whitespace-nowrap text-xs font-medium">${t.date.toLocaleDateString('pt-BR')}</td>
-                <td class="px-3 py-2 whitespace-nowrap">${badge}</td>
-                <td class="px-3 py-2 whitespace-nowrap text-xs text-gray-500 dark:text-gray-400">${t.category}</td>
-                <td class="px-3 py-2 whitespace-nowrap text-sm font-semibold text-gray-700 dark:text-gray-200 truncate max-w-[200px]" title="${t.description}">${t.description}</td>
-                <td class="px-3 py-2 whitespace-nowrap text-right text-xs font-bold ${isIncome ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'} val-privacy">${Utils.formatCurrency(t.value)}</td>
+
+        tbody.innerHTML = data.map(t => {
+            // No contexto de fatura: valor positivo = compra (vermelho), valor negativo = pagamento (verde)
+            // Mas verifique a lógica do seu DataService. Normalmente no parser: type: val > 0 ? 'expense' : 'income'
+            const isExpense = t.type === 'expense'; 
+            const valClass = isExpense ? 'text-rose-600 dark:text-rose-400' : 'text-emerald-600 dark:text-emerald-400';
+            const displayVal = isExpense ? -Math.abs(t.value) : Math.abs(t.value); // Força sinal visual
+
+            return `
+                <tr class="bg-white border-b hover:bg-gray-50 dark:bg-gray-800 dark:border-gray-700 dark:hover:bg-gray-700 transition-colors">
+                    <td class="px-3 py-3 font-medium text-gray-900 whitespace-nowrap dark:text-white text-xs">${t.date.toLocaleDateString()}</td>
+                    <td class="px-3 py-3 text-xs text-gray-500 dark:text-gray-400">Fatura</td>
+                    <td class="px-3 py-3 text-xs text-gray-600 dark:text-gray-300 truncate max-w-[200px]">${t.description}</td>
+                    <td class="px-3 py-3 text-xs text-gray-500 dark:text-gray-400"><span class="px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-700 border border-gray-200 dark:border-gray-600">${t.category}</span></td>
+                    <td class="px-3 py-3 text-right font-bold text-xs ${valClass} val-privacy">${Utils.formatCurrency(displayVal)}</td>
+                </tr>
             `;
-            frag.appendChild(tr);
-        });
-        tbody.innerHTML = '';
-        tbody.appendChild(frag);
+        }).join('');
+    },
+
+    renderExpenses() {
+        const tbody = Utils.DOM.get('expenses-table-body');
+        if (!tbody) return;
+        // Exemplo: mostrar top despesas ou algo específico
+        // Por padrão, se não houver lógica específica, limpa ou mostra consolidado filtrado
+        tbody.innerHTML = '<tr><td colspan="4" class="px-3 py-4 text-center text-xs text-gray-400">Selecione uma visualização específica.</td></tr>';
+    },
+
+    // Helper para tabelas simples (Bradesco e Santander Conta)
+    renderSimpleTable(tbody, data) {
+        if (data.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="5" class="px-3 py-4 text-center text-xs text-gray-400">Nenhum dado encontrado.</td></tr>';
+            return;
+        }
+        tbody.innerHTML = data.map(t => {
+            const valClass = t.value >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400';
+            return `
+                <tr class="bg-white border-b hover:bg-gray-50 dark:bg-gray-800 dark:border-gray-700 dark:hover:bg-gray-700 transition-colors">
+                    <td class="px-3 py-3 font-medium text-gray-900 whitespace-nowrap dark:text-white text-xs">${t.date.toLocaleDateString()}</td>
+                    <td class="px-3 py-3 text-xs text-gray-500 dark:text-gray-400">${t.type === 'income' ? 'Entrada' : 'Saída'}</td>
+                    <td class="px-3 py-3 text-xs text-gray-500 dark:text-gray-400"><span class="px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-700 border border-gray-200 dark:border-gray-600">${t.category}</span></td>
+                    <td class="px-3 py-3 text-xs text-gray-600 dark:text-gray-300 truncate max-w-[200px]" title="${t.description}">${t.description}</td>
+                    <td class="px-3 py-3 text-right font-bold text-xs ${valClass} val-privacy">${Utils.formatCurrency(t.value)}</td>
+                </tr>
+            `;
+        }).join('');
     }
 };
-Tables.init();
+window.Tables = Tables;
