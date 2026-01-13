@@ -30,7 +30,7 @@ const AppParams = {
         'pix bradesco', 
         'pix santander', 
         'transf tit', 
-        'apl.invest fac', 
+        'Apl.invest Fac', 
         'transfe pix des',
         'resgate inv fac',
         'pix recebido pedro gioia martins' // Novo item ignorado
@@ -49,3 +49,4 @@ const AppParams = {
     }
 };
 window.AppParams = AppParams;
+
