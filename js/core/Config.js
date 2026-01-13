@@ -31,12 +31,15 @@ const AppParams = {
         'pix santander', 
         'transf tit', 
         'apl.invest fac', 
-        'transfe pix des',
+        'transfe pix des', // Mantido o original
         'resgate inv fac',
         'pix recebido pedro gioia martins',
-        'apl.invest',   // Pega qualquer variação que comece com APL.INVEST
-        'invest fac',   // Pega variações de INVEST FACIL ou INVEST FAC
-        'invest.fac'    // Pega caso haja ponto entre as palavras
+        'apl.invest',
+        'invest fac',
+        'invest.fac',
+        'transfe pix',   // Pega "Transfe Pix" mesmo se o final mudar
+        'pix des',       // Pega "Pix Des" mesmo se o começo mudar
+        'transfe.pix'    // Caso haja ponto no lugar de espaço
     ],
     years: [2024, 2025, 2026],
     urls: {
