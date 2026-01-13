@@ -1,5 +1,4 @@
 const DataService = {
-    // ... (Propriedades mantidas) ...
     bradescoTransactions: [], 
     santanderAccountTransactions: [], 
     santanderCardTransactions: [],
@@ -188,7 +187,6 @@ const DataService = {
             };
         });
 
-        // FILTRO DE IGNORAR (Aplica os padrões do Config.js)
         const isIgnored = (desc) => AppParams.ignorePatterns.some(p => desc.toLowerCase().includes(p));
         const getFiscalPeriod = (date) => {
             let m = date.getMonth(); let y = date.getFullYear();
@@ -209,11 +207,9 @@ const DataService = {
                     if (!isIgnored(t.description)) {
                         const val = Math.abs(t.value);
                         if (t.value > 0) {
-                            // SOMA RECEITA
                             this.monthlyDataCache[y].income[m] += val;
                             this.monthlyDataCache[y].acc.income[m] += val;
                         } else {
-                            // SOMA DESPESA
                             this.monthlyDataCache[y].expenses[m] += val;
                             this.monthlyDataCache[y].acc.expenses[m] += val;
                         }
@@ -253,7 +249,6 @@ const DataService = {
         });
     },
 
-    // ... (Getters mantidos) ...
     getMonthly(year) { return this.monthlyDataCache[year]; },
     getLatestPeriod() { const now = new Date(); return { year: now.getFullYear(), month: now.getMonth() }; },
     getAggregated(year, isMonthly, indices, sourceFilter = 'all') {
@@ -295,48 +290,89 @@ const DataService = {
         return Array.from(cats).sort();
     },
     
-    // --- FUNÇÃO DE AUDITORIA DE RECEITA (NOVA) ---
+    // --- AUDITORIA DE RECEITA ---
     auditRevenue(year, month) {
         console.group(`🔎 AUDITORIA DE RECEITA (${AppParams.months.full[month]}/${year})`);
         
         const allTrans = [...this.bradescoTransactions, ...this.santanderAccountTransactions];
         const incomeItems = [];
         
-        let startM = month - 1; let startY = year; if(startM < 0){ startM=11; startY--; }
-        // Janela fiscal: 16/M-1 a 15/M
-        // Mas o buildCache usa getFiscalPeriod. Vamos simular o getFiscalPeriod.
-        
         allTrans.forEach(t => {
-            // Verifica se a transação cai no mês fiscal solicitado
-            let m = t.date.getMonth();
-            let y = t.date.getFullYear();
+            let m = t.date.getMonth(); let y = t.date.getFullYear();
             if (t.date.getDate() >= 16) { m++; if (m > 11) { m = 0; y++; } }
             
             if (m === month && y === year) {
-                // Se for valor positivo (entrada) e NÃO estiver ignorado
                 if (t.value > 0 && !AppParams.ignorePatterns.some(p => t.description.toLowerCase().includes(p))) {
                     incomeItems.push(t);
                 }
             }
         });
 
-        // Ordena do maior para o menor
         incomeItems.sort((a,b) => b.value - a.value);
-        
-        console.log(`Total Calculado: R$ ${incomeItems.reduce((a,b)=>a+b.value,0).toFixed(2)}`);
+        console.log(`Total Receita Calculado: R$ ${incomeItems.reduce((a,b)=>a+b.value,0).toFixed(2)}`);
         console.table(incomeItems.map(t => ({
             Data: t.date.toLocaleDateString(),
             Valor: t.value.toFixed(2),
             Descricao: t.description,
             Banco: t.source
         })));
+        console.groupEnd();
+    },
+
+    // --- NOVA AUDITORIA DE DESPESAS ---
+    auditExpenses(year, month) {
+        console.group(`🔎 AUDITORIA DE DESPESAS (TOP 10) - (${AppParams.months.full[month]}/${year})`);
         
-        console.log("💡 DICA: Se vir algo que não é renda (ex: transferência entre contas), adicione trecho do nome ao 'ignorePatterns' no Config.js.");
+        const allTrans = [
+            ...this.bradescoTransactions, 
+            ...this.santanderAccountTransactions,
+            ...this.santanderCardTransactions
+        ];
+        
+        const expenseItems = [];
+        
+        allTrans.forEach(t => {
+            let m = t.date.getMonth();
+            let y = t.date.getFullYear();
+            if (t.date.getDate() >= 16) { m++; if (m > 11) { m = 0; y++; } }
+            
+            if (m === month && y === year) {
+                // Filtra ignorados
+                if (!AppParams.ignorePatterns.some(p => t.description.toLowerCase().includes(p))) {
+                    let val = 0;
+                    
+                    // Cartão: Despesa se for 'expense' (positivo no parser)
+                    if (t.source === 'santander_card') {
+                        if (t.type === 'expense') val = t.value;
+                    } 
+                    // Contas: Despesa se valor < 0
+                    else {
+                        if (t.value < 0) val = Math.abs(t.value);
+                    }
+
+                    if (val > 0) {
+                        expenseItems.push({
+                            Data: t.date.toLocaleDateString(),
+                            Valor: val,
+                            Descricao: t.description,
+                            Fonte: t.source === 'santander_card' ? 'Cartão' : (t.source === 'bradesco' ? 'Bradesco' : 'Conta Santander')
+                        });
+                    }
+                }
+            }
+        });
+
+        // Ordena maior para menor
+        expenseItems.sort((a,b) => b.Valor - a.Valor);
+        const top10 = expenseItems.slice(0, 10);
+        
+        console.log(`Total Despesas Mês: R$ ${expenseItems.reduce((a,b)=>a+b.Valor,0).toFixed(2)}`);
+        console.table(top10.map(t => ({...t, Valor: t.Valor.toFixed(2)})));
+        console.log("💡 Use o Config.js para ignorar pagamentos de fatura ou transferências que apareçam aqui.");
         console.groupEnd();
     },
 
     getDashboardStats(year, month) {
-        // ... (Lógica do Dashboard mantida) ...
         let balBrad=0, balSant=0;
         if(this.bradescoTransactions.length) balBrad = this.bradescoTransactions[0].balance;
         if(this.santanderAccountTransactions.length) balSant = this.santanderAccountTransactions[0].balance;
@@ -396,8 +432,9 @@ const DataService = {
             }
         }
         
-        // CHAMA A AUDITORIA
+        // --- CHAMA AS AUDITORIAS ---
         this.auditRevenue(year, month);
+        this.auditExpenses(year, month); // Nova chamada
 
         const avgIncome = sumIncome/3; const avgFixed = sumFixed/3; const avgProjBal = sumProjBalance/3;
         const disposableRate = avgProjBal !== 0 ? ((avgProjBal - avgFixed)/avgProjBal)*100 : 0;
