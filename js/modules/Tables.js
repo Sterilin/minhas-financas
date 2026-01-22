@@ -1,43 +1,32 @@
 const Tables = {
     init() {
         // Tenta renderizar imediatamente
-        this.render();
+        this.renderAll();
         
-        // Se inscreve para atualizações de dados
+        // Se inscreve para atualizações de dados do DataService
         if (window.DataService && typeof DataService.subscribe === 'function') {
-            DataService.subscribe(() => this.render());
+            DataService.subscribe(() => this.renderAll());
         }
 
-        // Ouve mudanças de aba para atualizar a visualização
+        // Ouve mudanças de aba para garantir que a tabela seja desenhada
         document.addEventListener('tabChanged', (e) => {
-            const activeTab = e.detail && e.detail.tab ? e.detail.tab : '';
-            // Removido 'expenses' da lista de observação
-            const tableTabs = ['consolidated', 'bradesco', 'santander', 'history', 'data'];
-            
-            if (tableTabs.includes(activeTab)) {
-                setTimeout(() => this.render(), 50);
-            }
+            // Renderiza sempre que mudar de aba, por segurança
+            setTimeout(() => this.renderAll(), 50);
         });
     },
 
-    render() {
-        const isVisible = (id) => {
-            const el = document.getElementById(id);
-            return el && !el.classList.contains('hidden');
-        };
-
-        // Renderiza apenas a tabela que está visível na tela
-        if (isVisible('view-consolidated')) this.renderConsolidated();
-        if (isVisible('view-bradesco')) this.renderBradesco();
-        if (isVisible('view-santander')) this.renderSantanderCard();
-        if (isVisible('view-history')) this.renderSantanderAccount();
-        // Removida chamada para view-expenses
+    // Renderiza TODAS as tabelas de uma vez (mais seguro do que verificar visibilidade)
+    renderAll() {
+        this.renderConsolidated();
+        this.renderBradesco();
+        this.renderSantanderAccount();
+        this.renderSantanderCard();
     },
 
     // --- TABELA CONSOLIDADA ---
     renderConsolidated() {
         const tbody = document.getElementById('consolidated-table-body');
-        if (!tbody) return;
+        if (!tbody) return; // Se o elemento não existir no HTML, para aqui
 
         if (!window.DataService || typeof DataService.getConsolidatedTransactions !== 'function') {
             tbody.innerHTML = '<tr><td colspan="5" class="px-3 py-4 text-center text-xs text-gray-400">Carregando dados...</td></tr>';
@@ -90,7 +79,7 @@ const Tables = {
 
     // --- TABELA SANTANDER CONTA ---
     renderSantanderAccount() {
-        const tbody = document.getElementById('history-table-body');
+        const tbody = document.getElementById('history-table-body'); // Nota: ID do HTML é 'history-table-body' para Santander Conta
         if (!tbody) return;
         const data = (window.DataService && DataService.santanderAccountTransactions) ? DataService.santanderAccountTransactions : [];
         this.renderSimpleTable(tbody, data);
@@ -125,7 +114,7 @@ const Tables = {
         }).join('');
     },
 
-    // Helper genérico para tabelas simples
+    // Helper genérico
     renderSimpleTable(tbody, data) {
         if (!data || data.length === 0) {
             tbody.innerHTML = '<tr><td colspan="5" class="px-3 py-4 text-center text-xs text-gray-400">Nenhum dado encontrado.</td></tr>';
