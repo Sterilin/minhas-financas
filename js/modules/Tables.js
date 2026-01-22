@@ -1,138 +1,151 @@
-const Tables = {
-    init() {
-        // Tenta renderizar imediatamente
-        this.renderAll();
-        
-        // Se inscreve para atualizações de dados do DataService
-        if (window.DataService && typeof DataService.subscribe === 'function') {
-            DataService.subscribe(() => this.renderAll());
-        }
-
-        // Ouve mudanças de aba para garantir que a tabela seja desenhada
+ init() {
         document.addEventListener('tabChanged', (e) => {
-            // Renderiza sempre que mudar de aba, por segurança
-            setTimeout(() => this.renderAll(), 50);
+            const t = e.detail.tab;
+            if(t === 'bradesco') this.renderBradesco(); // Nova aba
+            if(t === 'history') this.renderHistory();
+            if(t === 'santander') this.renderSantander();
+            if(t === 'bradesco') this.renderBradesco();
+            if(t === 'history') this.renderHistory();     // Agora exibe Conta Santander
+            if(t === 'santander') this.renderSantander(); // Agora exibe Cartão Santander
+            if(t === 'consolidated') this.renderConsolidated();
         });
     },
 
-    // Renderiza TODAS as tabelas de uma vez (mais seguro do que verificar visibilidade)
-    renderAll() {
-        this.renderConsolidated();
-        this.renderBradesco();
-        this.renderSantanderAccount();
-        this.renderSantanderCard();
-    },
-
-    // --- TABELA CONSOLIDADA ---
-    renderConsolidated() {
-        const tbody = document.getElementById('consolidated-table-body');
-        if (!tbody) return; // Se o elemento não existir no HTML, para aqui
-
-        if (!window.DataService || typeof DataService.getConsolidatedTransactions !== 'function') {
-            tbody.innerHTML = '<tr><td colspan="5" class="px-3 py-4 text-center text-xs text-gray-400">Carregando dados...</td></tr>';
-            return;
-        }
-
-        const data = DataService.getConsolidatedTransactions();
-        
-        if (!data || data.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="5" class="px-3 py-4 text-center text-xs text-gray-400">Nenhum dado encontrado.</td></tr>';
-            return;
-        }
-
-        tbody.innerHTML = data.map(t => {
-            const dateStr = t.date ? t.date.toLocaleDateString() : '-';
-            const val = t.value || 0;
-            const valClass = val >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400';
-            
-            let sourceHtml = '';
-            const s = (t.sourceLabel || '').toLowerCase();
-            
-            if (s.includes('bradesco')) {
-                sourceHtml = `<span class="font-bold text-red-700 dark:text-red-400 flex items-center gap-1"><i class="fa-solid fa-building-columns text-[10px]"></i> Bradesco</span>`;
-            } else if (s.includes('santander')) {
-                const icon = s.includes('cartão') ? 'fa-brands fa-cc-mastercard' : 'fa-solid fa-building-columns';
-                sourceHtml = `<span class="font-bold text-rose-600 dark:text-rose-400 flex items-center gap-1"><i class="${icon} text-[10px]"></i> Santander</span>`;
-            } else {
-                sourceHtml = `<span class="text-gray-600 dark:text-gray-400">${t.sourceLabel || 'Outros'}</span>`;
-            }
-
-            return `
-                <tr class="bg-white border-b hover:bg-gray-50 dark:bg-gray-800 dark:border-gray-700 dark:hover:bg-gray-700 transition-colors">
-                    <td class="px-3 py-3 font-medium text-gray-900 whitespace-nowrap dark:text-white text-xs">${dateStr}</td>
-                    <td class="px-3 py-3 text-xs">${sourceHtml}</td>
-                    <td class="px-3 py-3 text-xs text-gray-600 dark:text-gray-300 truncate max-w-[150px]" title="${t.description}">${t.description || 'Sem descrição'}</td>
-                    <td class="px-3 py-3 text-xs text-gray-500 dark:text-gray-400"><span class="px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-700 border border-gray-200 dark:border-gray-600">${t.category || 'Geral'}</span></td>
-                    <td class="px-3 py-3 text-right font-bold text-xs ${valClass} val-privacy">${Utils.formatCurrency(val)}</td>
-                </tr>
-            `;
-        }).join('');
-    },
-
-    // --- TABELA BRADESCO ---
+    // Nova função: Tabela Bradesco
+    // Renderiza Bradesco (Já configurado anteriormente, mantido para consistência)
     renderBradesco() {
-        const tbody = document.getElementById('bradesco-table-body');
-        if (!tbody) return;
-        const data = (window.DataService && DataService.bradescoTransactions) ? DataService.bradescoTransactions : [];
-        this.renderSimpleTable(tbody, data);
+        const tbody = Utils.DOM.get('bradesco-table-body');
+        if(!tbody) return;
+        this.renderGenericTable(tbody, DataService.bradescoTransactions);
     },
 
-    // --- TABELA SANTANDER CONTA ---
-    renderSantanderAccount() {
-        const tbody = document.getElementById('history-table-body'); // Nota: ID do HTML é 'history-table-body' para Santander Conta
-        if (!tbody) return;
-        const data = (window.DataService && DataService.santanderAccountTransactions) ? DataService.santanderAccountTransactions : [];
-        this.renderSimpleTable(tbody, data);
+    // Renderiza Conta Santander
+    renderHistory() {
+        const tbody = Utils.DOM.get('history-table-body'); // ID no HTML é 'history-table-body' para a seção view-history
+        if(!tbody) return;
+        this.renderGenericTable(tbody, DataService.santanderAccountTransactions);
     },
 
-    // --- TABELA SANTANDER CARTÃO ---
-    renderSantanderCard() {
-        const tbody = document.getElementById('santander-table-body');
-        if (!tbody) return;
+    // Renderiza Cartão Santander
+    renderSantander() {
+        const tbody = Utils.DOM.get('santander-table-body');
+        const status = Utils.DOM.get('santander-status');
+        if(!tbody) return;
+
+        // Usa a nova lista específica do DataService
+        const data = DataService.bradescoTransactions || [];
         
-        const data = (window.DataService && DataService.santanderCardTransactions) ? DataService.santanderCardTransactions : [];
-        
-        if (data.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="5" class="px-3 py-4 text-center text-xs text-gray-400">Nenhum dado encontrado.</td></tr>';
+        const data = DataService.santanderCardTransactions || [];
+        if(status) status.innerText = `${data.length} registros`;
+
+        if(data.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="5" class="text-center py-4 text-xs text-gray-400">Nenhum registro encontrado.</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="4" class="text-center py-4 text-xs text-gray-400">Nenhum registro encontrado.</td></tr>';
             return;
         }
 
-        tbody.innerHTML = data.map(t => {
-            const isExpense = t.type === 'expense'; 
-            const valClass = isExpense ? 'text-rose-600 dark:text-rose-400' : 'text-emerald-600 dark:text-emerald-400';
-            const displayVal = isExpense ? -Math.abs(t.value) : Math.abs(t.value);
-
-            return `
-                <tr class="bg-white border-b hover:bg-gray-50 dark:bg-gray-800 dark:border-gray-700 dark:hover:bg-gray-700 transition-colors">
-                    <td class="px-3 py-3 font-medium text-gray-900 whitespace-nowrap dark:text-white text-xs">${t.date.toLocaleDateString()}</td>
-                    <td class="px-3 py-3 text-xs text-gray-500 dark:text-gray-400">Fatura</td>
-                    <td class="px-3 py-3 text-xs text-gray-600 dark:text-gray-300 truncate max-w-[200px]" title="${t.description}">${t.description}</td>
-                    <td class="px-3 py-3 text-xs text-gray-500 dark:text-gray-400"><span class="px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-700 border border-gray-200 dark:border-gray-600">${t.category}</span></td>
-                    <td class="px-3 py-3 text-right font-bold text-xs ${valClass} val-privacy">${Utils.formatCurrency(displayVal)}</td>
-                </tr>
+        const frag = document.createDocumentFragment();
+        data.slice(0, 100).forEach(t => { // Limite visual
+            const isIncome = t.value >= 0;
+            const badge = isIncome 
+                ? '<span class="bg-emerald-100 text-emerald-800 text-[10px] font-bold px-2 py-0.5 rounded dark:bg-emerald-900 dark:text-emerald-200">Entrada</span>' 
+                : '<span class="bg-rose-100 text-rose-800 text-[10px] font-bold px-2 py-0.5 rounded dark:bg-rose-900 dark:text-rose-200">Saída</span>';
+            
+        data.slice(0, 100).forEach(t => {
+            const tr = document.createElement('tr');
+            tr.className = "hover:bg-gray-50 dark:hover:bg-gray-750 transition-colors";
+            tr.innerHTML = `
+                <td class="px-3 py-2 whitespace-nowrap text-xs font-medium">${t.date.toLocaleDateString('pt-BR')}</td>
+                <td class="px-3 py-2 whitespace-nowrap">${badge}</td>
+                <td class="px-3 py-2 whitespace-nowrap text-xs text-gray-500 dark:text-gray-400">${t.category}</td>
+            const valClass = t.value > 0 ? 'text-rose-600 dark:text-rose-400' : 'text-emerald-600 dark:text-emerald-400';
+            tr.innerHTML = `<td class="px-3 py-2 whitespace-nowrap text-xs font-medium">${t.date.toLocaleDateString('pt-BR')}</td>
+                <td class="px-3 py-2 whitespace-nowrap text-sm font-semibold text-gray-700 dark:text-gray-200 truncate max-w-[200px]" title="${t.description}">${t.description}</td>
+                <td class="px-3 py-2 whitespace-nowrap text-right text-xs font-bold ${isIncome ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'} val-privacy">${Utils.formatCurrency(t.value)}</td>
             `;
-        }).join('');
+                <td class="px-3 py-2 whitespace-nowrap text-xs text-gray-500 dark:text-gray-400">${t.category || '-'}</td>
+                <td class="px-3 py-2 whitespace-nowrap text-right text-xs font-bold ${valClass} val-privacy">${Utils.formatCurrency(Math.abs(t.value))}</td>`;
+            frag.appendChild(tr);
+        });
+        tbody.innerHTML = '';
+@@ -57,16 +65,16 @@ const Tables = {
+            const tr = document.createElement('tr');
+            tr.className = "hover:bg-gray-50 dark:hover:bg-gray-750 transition-colors";
+            const colorClass = UI.getCategoryColor(t.category);
+            const sourceBadge = t.sourceType === 'card' 
+                ? '<span class="bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400 text-[10px] px-1.5 py-0.5 rounded border border-rose-200 dark:border-rose-800">Cartão</span>'
+                : (t.source === 'bradesco' 
+                    ? '<span class="bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400 text-[10px] px-1.5 py-0.5 rounded border border-red-200 dark:border-red-800">Bradesco</span>'
+                    : '<span class="bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300 text-[10px] px-1.5 py-0.5 rounded border border-gray-200 dark:border-gray-700">Conta</span>');
+
+            let badge = '<span class="bg-gray-100 text-gray-700 text-[10px] px-1.5 py-0.5 rounded">Conta</span>';
+            if (t.source === 'santander_card') badge = '<span class="bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400 text-[10px] px-1.5 py-0.5 rounded border border-purple-200">Cartão</span>';
+            else if (t.source === 'bradesco') badge = '<span class="bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400 text-[10px] px-1.5 py-0.5 rounded border border-red-200">Bradesco</span>';
+            else if (t.source === 'santander_acc') badge = '<span class="bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400 text-[10px] px-1.5 py-0.5 rounded border border-red-200">Santander</span>';
+
+            const isInc = t.value >= 0;
+
+            tr.innerHTML = `<td class="px-3 py-2 whitespace-nowrap text-xs font-medium">${t.date.toLocaleDateString('pt-BR')}</td>
+                <td class="px-3 py-2 whitespace-nowrap">${sourceBadge}</td>
+                <td class="px-3 py-2 whitespace-nowrap">${badge}</td>
+                <td class="px-3 py-2 whitespace-nowrap text-sm font-semibold text-gray-700 dark:text-gray-200 truncate max-w-[150px]" title="${t.description}">${t.description}</td>
+                <td class="px-3 py-2 whitespace-nowrap text-xs text-gray-500 dark:text-gray-400"><span class="flex items-center gap-2"><span class="w-2 h-2 rounded-full ${colorClass}"></span>${t.category}</span></td>
+                <td class="px-3 py-2 whitespace-nowrap text-right text-xs font-bold ${isInc ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'} val-privacy">${Utils.formatCurrency(t.value)}</td>`;
+@@ -76,41 +84,32 @@ const Tables = {
+        tbody.appendChild(frag);
     },
 
-    // Helper genérico
-    renderSimpleTable(tbody, data) {
-        if (!data || data.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="5" class="px-3 py-4 text-center text-xs text-gray-400">Nenhum dado encontrado.</td></tr>';
+    renderSantander() {
+        const thead = Utils.DOM.get('santander-table-head');
+        const tbody = Utils.DOM.get('santander-table-body');
+        const status = Utils.DOM.get('santander-status');
+        if(!tbody) return;
+        
+        // Usa lista específica do Santander
+        const data = DataService.santanderTransactions || [];
+        
+        if(status) status.innerText = `${data.length} registros`;
+        if(thead) {
+            // Cabeçalho dinâmico baseado no TSV (opcional, aqui fixamos para simplicidade)
+            thead.innerHTML = '<tr><th class="px-3 py-2 rounded-l-lg">Data</th><th class="px-3 py-2">Descrição</th><th class="px-3 py-2">Categoria</th><th class="px-3 py-2 text-right rounded-r-lg">Valor</th></tr>';
+    // Helper reutilizável para tabelas de Extrato Bancário (Bradesco e Santander Conta)
+    renderGenericTable(tbody, data) {
+        if(!data || data.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="5" class="text-center py-4 text-xs text-gray-400">Nenhum registro encontrado.</td></tr>';
             return;
         }
-        tbody.innerHTML = data.map(t => {
-            const val = t.value || 0;
-            const valClass = val >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400';
-            return `
-                <tr class="bg-white border-b hover:bg-gray-50 dark:bg-gray-800 dark:border-gray-700 dark:hover:bg-gray-700 transition-colors">
-                    <td class="px-3 py-3 font-medium text-gray-900 whitespace-nowrap dark:text-white text-xs">${t.date.toLocaleDateString()}</td>
-                    <td class="px-3 py-3 text-xs text-gray-500 dark:text-gray-400">${val >= 0 ? 'Entrada' : 'Saída'}</td>
-                    <td class="px-3 py-3 text-xs text-gray-500 dark:text-gray-400"><span class="px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-700 border border-gray-200 dark:border-gray-600">${t.category}</span></td>
-                    <td class="px-3 py-3 text-xs text-gray-600 dark:text-gray-300 truncate max-w-[200px]" title="${t.description}">${t.description}</td>
-                    <td class="px-3 py-3 text-right font-bold text-xs ${valClass} val-privacy">${Utils.formatCurrency(val)}</td>
-                </tr>
+
+        const frag = document.createDocumentFragment();
+        data.slice(0, 100).forEach(t => {
+            const isIncome = t.value >= 0;
+            const badge = isIncome 
+                ? '<span class="bg-emerald-100 text-emerald-800 text-[10px] font-bold px-2 py-0.5 rounded dark:bg-emerald-900 dark:text-emerald-200">Entrada</span>' 
+                : '<span class="bg-rose-100 text-rose-800 text-[10px] font-bold px-2 py-0.5 rounded dark:bg-rose-900 dark:text-rose-200">Saída</span>';
+            
+            const tr = document.createElement('tr');
+            tr.className = "hover:bg-gray-50 dark:hover:bg-gray-750 transition-colors";
+            const valClass = t.value > 0 ? 'text-rose-600 dark:text-rose-400' : 'text-emerald-600 dark:text-emerald-400';
+            tr.innerHTML = `<td class="px-3 py-2 whitespace-nowrap text-xs font-medium">${t.date.toLocaleDateString('pt-BR')}</td>
+            tr.innerHTML = `
+                <td class="px-3 py-2 whitespace-nowrap text-xs font-medium">${t.date.toLocaleDateString('pt-BR')}</td>
+                <td class="px-3 py-2 whitespace-nowrap">${badge}</td>
+                <td class="px-3 py-2 whitespace-nowrap text-xs text-gray-500 dark:text-gray-400">${t.category}</td>
+                <td class="px-3 py-2 whitespace-nowrap text-sm font-semibold text-gray-700 dark:text-gray-200 truncate max-w-[200px]" title="${t.description}">${t.description}</td>
+                <td class="px-3 py-2 whitespace-nowrap text-xs text-gray-500 dark:text-gray-400">${t.category || '-'}</td>
+                <td class="px-3 py-2 whitespace-nowrap text-right text-xs font-bold ${valClass} val-privacy">${Utils.formatCurrency(Math.abs(t.value))}</td>`;
+                <td class="px-3 py-2 whitespace-nowrap text-right text-xs font-bold ${isIncome ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'} val-privacy">${Utils.formatCurrency(t.value)}</td>
             `;
-        }).join('');
+            frag.appendChild(tr);
+        });
+        tbody.innerHTML = '';
+        tbody.appendChild(frag);
+    },
+
+    renderHistory() {
+        // Renomeado para Conta Santander - Usa lógica similar ao Santander mas focada em Conta se houver separação futura
+        // Por enquanto, mostra Santander também ou vazio se não houver dados de conta específicos
+        this.renderSantander(); 
     }
 };
-window.Tables = Tables;
+
+Tables.init();
