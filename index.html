@@ -51,75 +51,17 @@
             <button onclick="Handlers.switchTab('goals')" id="btn-goals" class="tab-inactive py-3 px-1 transition-colors flex items-center gap-2 shrink-0 text-sm font-medium">
                 <i class="fa-solid fa-bullseye"></i> Metas
             </button>
-            <button onclick="Handlers.switchTab('consolidated')" id="btn-data" class="tab-inactive py-3 px-1 transition-colors flex items-center gap-2 shrink-0 text-sm font-medium">
+            <button onclick="Handlers.switchTab('data')" id="btn-data" class="tab-inactive py-3 px-1 transition-colors flex items-center gap-2 shrink-0 text-sm font-medium">
                 <i class="fa-solid fa-database"></i> Dados
             </button>
         </nav>
 
-        <div id="sub-nav-data" class="hidden bg-gray-50 dark:bg-gray-800/50 border-b border-gray-200 dark:border-gray-700 transition-all">
-            <div class="max-w-4xl mx-auto px-4 py-2 flex gap-3 overflow-x-auto">
-                <button onclick="Handlers.switchTab('consolidated')" id="btn-consolidated" class="subtab-active px-3 py-1.5 rounded-md text-xs font-medium transition-colors flex items-center gap-2 text-indigo-600 dark:text-indigo-400">
-                    <i class="fa-solid fa-layer-group"></i> Consolidado
-                </button>
-                <button onclick="Handlers.switchTab('bradesco')" id="btn-bradesco" class="subtab-inactive px-3 py-1.5 rounded-md text-xs font-medium transition-colors flex items-center gap-2 text-red-600 dark:text-red-400">
-                    <i class="fa-solid fa-building-columns"></i> Conta Bradesco
-                </button>
-                <button onclick="Handlers.switchTab('history')" id="btn-history" class="subtab-inactive px-3 py-1.5 rounded-md text-xs font-medium transition-colors flex items-center gap-2">
-                    <i class="fa-solid fa-clock-rotate-left"></i> Conta Santander
-                </button>
-                <button onclick="Handlers.switchTab('santander')" id="btn-santander" class="subtab-inactive px-3 py-1.5 rounded-md text-xs font-medium transition-colors flex items-center gap-2 text-rose-600 dark:text-rose-400">
-                    <i class="fa-brands fa-cc-mastercard"></i> Cartão Santander
-                </button>
-                <button onclick="Handlers.switchTab('expenses')" id="btn-expenses" class="subtab-inactive px-3 py-1.5 rounded-md text-xs font-medium transition-colors flex items-center gap-2">
-                    <i class="fa-solid fa-receipt"></i> Outros
-                </button>
-            </div>
-        </div>
     </header>
 
     <main class="flex-1 overflow-y-auto p-4">
         <div class="max-w-4xl mx-auto">
             
             <section id="view-dashboard" class="fade-in">
-            </section>
-
-            <section id="view-bradesco" class="hidden fade-in">
-                <div class="bg-white p-6 rounded-xl card-shadow dark:bg-gray-800 transition-theme mb-6">
-                    <div class="flex justify-between items-center mb-6"><h3 class="font-bold text-gray-800 dark:text-white text-lg"><i class="fa-solid fa-building-columns text-red-600 mr-2"></i> Extrato Bradesco</h3></div>
-                    <div class="overflow-x-auto">
-                        <table class="w-full text-left text-sm text-gray-500 dark:text-gray-400">
-                            <thead class="bg-gray-50 text-xs uppercase text-gray-700 dark:bg-gray-700 dark:text-gray-400">
-                                <tr>
-                                    <th class="px-3 py-2 rounded-l-lg">Data</th>
-                                    <th class="px-3 py-2">Tipo</th>
-                                    <th class="px-3 py-2">Categoria</th>
-                                    <th class="px-3 py-2">Descrição</th>
-                                    <th class="px-3 py-2 text-right">Valor</th>
-                                </tr>
-                            </thead>
-                            <tbody id="bradesco-table-body" class="divide-y divide-gray-100 dark:divide-gray-700"></tbody>
-                        </table>
-                    </div>
-                </div>
-            </section>
-
-            <section id="view-expenses" class="hidden fade-in">
-                <div class="bg-white p-6 rounded-xl card-shadow dark:bg-gray-800 transition-theme mb-6">
-                    <div class="flex justify-between items-center mb-6"><h3 class="font-bold text-gray-800 dark:text-white text-lg"><i class="fa-solid fa-receipt text-rose-500 mr-2"></i> Detalhamento - Outros</h3></div>
-                    <div class="overflow-x-auto">
-                        <table class="w-full text-left text-sm text-gray-500 dark:text-gray-400">
-                            <thead class="bg-gray-50 text-xs uppercase text-gray-700 dark:bg-gray-700 dark:text-gray-400">
-                                <tr>
-                                    <th class="px-3 py-2 rounded-l-lg">Data</th>
-                                    <th class="px-3 py-2">Categoria</th>
-                                    <th class="px-3 py-2">Descrição</th>
-                                    <th class="px-3 py-2 text-right">Valor</th>
-                                </tr>
-                            </thead>
-                            <tbody id="expenses-table-body" class="divide-y divide-gray-100 dark:divide-gray-700"></tbody>
-                        </table>
-                    </div>
-                </div>
             </section>
 
             <section id="view-report" class="hidden fade-in">
@@ -244,27 +186,79 @@
                 </div>
             </section>
 
-            <section id="view-history" class="hidden fade-in">
-                <div class="bg-white p-6 rounded-xl card-shadow dark:bg-gray-800 transition-theme mb-6">
-                   <div class="flex justify-between items-center mb-6"><h3 class="font-bold text-gray-800 dark:text-white text-lg"><i class="fa-solid fa-clock-rotate-left text-gray-500 mr-2"></i> Conta Santander</h3><span class="text-xs text-gray-400 font-normal">Base Unificada</span></div>
-                   <div class="overflow-x-auto"><table class="w-full text-left text-sm text-gray-500 dark:text-gray-400"><thead class="bg-gray-50 text-xs uppercase text-gray-700 dark:bg-gray-700 dark:text-gray-400"><tr><th class="px-3 py-2 rounded-l-lg">Data</th><th class="px-3 py-2">Tipo</th><th class="px-3 py-2">Categoria</th><th class="px-3 py-2">Descrição</th><th class="px-3 py-2 text-right rounded-r-lg">Valor</th></tr></thead><tbody id="history-table-body" class="divide-y divide-gray-100 dark:divide-gray-700"></tbody></table></div>
+            <section id="view-data" class="hidden fade-in p-4 sm:p-6 mb-20">
+               <div class="flex flex-col sm:flex-row justify-between items-center mb-6 gap-4">
+                    <h2 class="text-xl font-bold text-gray-800 dark:text-white">Dados & Auditoria</h2>
+        
+                    <div class="flex bg-gray-100 dark:bg-gray-700 p-1 rounded-lg overflow-x-auto max-w-full">
+                        <button onclick="Tables.switchSubTab('audit')" id="tab-btn-audit" class="px-3 py-1.5 text-xs font-medium rounded-md transition-all shadow-sm bg-white text-gray-800 dark:bg-gray-600 dark:text-white whitespace-nowrap">
+                            Auditoria (Mês)
+                        </button>
+                        <button onclick="Tables.switchSubTab('bradesco')" id="tab-btn-bradesco" class="px-3 py-1.5 text-xs font-medium rounded-md transition-all text-gray-500 hover:text-gray-700 dark:text-gray-400 whitespace-nowrap">
+                            Bradesco
+                        </button>
+                        <button onclick="Tables.switchSubTab('santander-acc')" id="tab-btn-santander-acc" class="px-3 py-1.5 text-xs font-medium rounded-md transition-all text-gray-500 hover:text-gray-700 dark:text-gray-400 whitespace-nowrap">
+                            Santander Conta
+                        </button>
+                        <button onclick="Tables.switchSubTab('santander-card')" id="tab-btn-santander-card" class="px-3 py-1.5 text-xs font-medium rounded-md transition-all text-gray-500 hover:text-gray-700 dark:text-gray-400 whitespace-nowrap">
+                            Fatura
+                        </button>
+                    </div>
+                </div>
+
+                <div id="subview-audit" class="subview-container fade-in">
+                    <div class="bg-blue-50 border-l-4 border-blue-500 p-4 mb-6 rounded-r-lg dark:bg-blue-900/20 dark:border-blue-700">
+                        <p class="text-xs text-blue-700 dark:text-blue-300">
+                            <strong>Raio-X do Mês:</strong> Estas são as transações exatas somadas para compor o seu Resumo Financeiro atual. Itens ignorados não aparecem aqui.
+                        </p>
+                    </div>
+            
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        <div class="bg-white rounded-xl shadow-sm border border-gray-100 dark:bg-gray-800 dark:border-gray-700 overflow-hidden flex flex-col h-[500px]">
+                            <div class="bg-emerald-50 dark:bg-emerald-900/30 px-4 py-3 border-b border-emerald-100 dark:border-emerald-800 flex justify-between items-center shrink-0">
+                                <h3 class="font-bold text-emerald-700 dark:text-emerald-400 text-sm">Receitas do Mês</h3>
+                                <span class="text-xs font-bold text-emerald-600 dark:text-emerald-300 bg-white dark:bg-gray-800 px-2 py-1 rounded border border-emerald-200 dark:border-emerald-800" id="audit-income-total">R$ 0,00</span>
+                            </div>
+                            <div class="overflow-y-auto flex-1 p-0">
+                                <table class="w-full text-left border-collapse">
+                                    <tbody id="audit-income-body"></tbody>
+                                </table>
+                            </div>
+                        </div>
+            
+                        <div class="bg-white rounded-xl shadow-sm border border-gray-100 dark:bg-gray-800 dark:border-gray-700 overflow-hidden flex flex-col h-[500px]">
+                            <div class="bg-rose-50 dark:bg-rose-900/30 px-4 py-3 border-b border-rose-100 dark:border-rose-800 flex justify-between items-center shrink-0">
+                                <h3 class="font-bold text-rose-700 dark:text-rose-400 text-sm">Gastos do Mês</h3>
+                                <span class="text-xs font-bold text-rose-600 dark:text-rose-300 bg-white dark:bg-gray-800 px-2 py-1 rounded border border-rose-200 dark:border-rose-800" id="audit-expense-total">R$ 0,00</span>
+                            </div>
+                            <div class="overflow-y-auto flex-1 p-0">
+                                <table class="w-full text-left border-collapse">
+                                    <tbody id="audit-expense-body"></tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            
+                <div id="subview-bank" class="subview-container hidden fade-in">
+                    <div class="bg-white rounded-xl shadow-sm border border-gray-100 dark:bg-gray-800 dark:border-gray-700 overflow-hidden">
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left border-collapse">
+                                <thead class="bg-gray-50 dark:bg-gray-700 border-b border-gray-200 dark:border-gray-600">
+                                    <tr>
+                                        <th class="px-4 py-3 text-[10px] font-bold text-gray-400 uppercase tracking-wider w-24">Data</th>
+                                        <th class="px-4 py-3 text-[10px] font-bold text-gray-400 uppercase tracking-wider">Descrição</th>
+                                        <th class="px-4 py-3 text-[10px] font-bold text-gray-400 uppercase tracking-wider w-32">Categoria</th>
+                                        <th class="px-4 py-3 text-[10px] font-bold text-gray-400 uppercase tracking-wider text-right w-28">Valor</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="bank-table-body">
+                                    </tbody>
+                            </table>
+                        </div>
+                    </div>
                 </div>
             </section>
-
-            <section id="view-santander" class="hidden fade-in">
-                <div class="bg-white p-6 rounded-xl card-shadow dark:bg-gray-800 transition-theme mb-6">
-                   <div class="flex justify-between items-center mb-6"><h3 class="font-bold text-gray-800 dark:text-white text-lg flex items-center gap-2"><i class="fa-brands fa-cc-mastercard text-rose-600"></i> Fatura Santander</h3><span class="text-xs text-gray-400 font-normal" id="santander-status">Carregando...</span></div>
-                   <div class="overflow-x-auto"><table class="w-full text-left text-sm text-gray-500 dark:text-gray-400"><thead id="santander-table-head" class="bg-gray-50 text-xs uppercase text-gray-700 dark:bg-gray-700 dark:text-gray-400"></thead><tbody id="santander-table-body" class="divide-y divide-gray-100 dark:divide-gray-700"></tbody></table></div>
-                </div>
-            </section>
-
-            <section id="view-consolidated" class="hidden fade-in">
-                <div class="bg-white p-6 rounded-xl card-shadow dark:bg-gray-800 transition-theme mb-6">
-                   <div class="flex justify-between items-center mb-6"><h3 class="font-bold text-gray-800 dark:text-white text-lg flex items-center gap-2"><i class="fa-solid fa-layer-group text-indigo-600"></i> Extrato Consolidado</h3><span class="text-xs text-gray-400 font-normal">Conta + Cartões (Sem Duplicidade)</span></div>
-                   <div class="overflow-x-auto"><table class="w-full text-left text-sm text-gray-500 dark:text-gray-400"><thead class="bg-gray-50 text-xs uppercase text-gray-700 dark:bg-gray-700 dark:text-gray-400"><tr><th class="px-3 py-2 rounded-l-lg">Data</th><th class="px-3 py-2">Origem</th><th class="px-3 py-2">Descrição</th><th class="px-3 py-2">Categoria</th><th class="px-3 py-2 text-right rounded-r-lg">Valor</th></tr></thead><tbody id="consolidated-table-body" class="divide-y divide-gray-100 dark:divide-gray-700"></tbody></table></div>
-                </div>
-            </section>
-
         </div>
     </main>
 
@@ -284,3 +278,4 @@
     <script src="js/main.js"></script>
 </body>
 </html>
+
