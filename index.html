@@ -4,14 +4,14 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Minhas Finanças Pro</title>
-    
+
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = { darkMode: 'class' }
     </script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    
+
     <link rel="stylesheet" href="css/styles.css">
 </head>
 <body class="bg-gray-100 text-gray-800 h-screen flex flex-col dark:bg-gray-900 dark:text-gray-100 transition-theme" id="app-body">
@@ -24,7 +24,7 @@
                 </div>
                 <h1 class="text-xl font-bold text-gray-800 tracking-tight dark:text-white">Finanças<span class="text-blue-600 dark:text-blue-400">Pro</span></h1>
             </div>
-            
+
             <div class="flex items-center gap-3">
                 <button onclick="Handlers.togglePrivacy()" id="btn-privacy" class="p-2 rounded-full text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-700 transition" title="Ocultar Valores">
                     <i class="fa-regular fa-eye"></i>
@@ -37,7 +37,7 @@
                 </div>
             </div>
         </div>
-        
+
         <nav class="max-w-4xl mx-auto px-4 mt-2 flex gap-4 sm:gap-6 border-b border-gray-200 dark:border-gray-700 overflow-x-auto">
             <button onclick="Handlers.switchTab('dashboard')" id="btn-dashboard" class="tab-active py-3 px-1 transition-colors flex items-center gap-2 shrink-0 text-sm font-medium">
                 <i class="fa-solid fa-chart-pie"></i> Resumo
@@ -51,78 +51,74 @@
             <button onclick="Handlers.switchTab('goals')" id="btn-goals" class="tab-inactive py-3 px-1 transition-colors flex items-center gap-2 shrink-0 text-sm font-medium">
                 <i class="fa-solid fa-bullseye"></i> Metas
             </button>
+            <button onclick="Handlers.switchTab('consolidated')" id="btn-data" class="tab-inactive py-3 px-1 transition-colors flex items-center gap-2 shrink-0 text-sm font-medium">
             <button onclick="Handlers.switchTab('data')" id="btn-data" class="tab-inactive py-3 px-1 transition-colors flex items-center gap-2 shrink-0 text-sm font-medium">
                 <i class="fa-solid fa-database"></i> Dados
             </button>
         </nav>
 
+        <div id="sub-nav-data" class="hidden bg-gray-50 dark:bg-gray-800/50 border-b border-gray-200 dark:border-gray-700 transition-all">
+            <div class="max-w-4xl mx-auto px-4 py-2 flex gap-3 overflow-x-auto">
+                <button onclick="Handlers.switchTab('consolidated')" id="btn-consolidated" class="subtab-active px-3 py-1.5 rounded-md text-xs font-medium transition-colors flex items-center gap-2 text-indigo-600 dark:text-indigo-400">
+                    <i class="fa-solid fa-layer-group"></i> Consolidado
+                </button>
+                <button onclick="Handlers.switchTab('bradesco')" id="btn-bradesco" class="subtab-inactive px-3 py-1.5 rounded-md text-xs font-medium transition-colors flex items-center gap-2 text-red-600 dark:text-red-400">
+                    <i class="fa-solid fa-building-columns"></i> Conta Bradesco
+                </button>
+                <button onclick="Handlers.switchTab('history')" id="btn-history" class="subtab-inactive px-3 py-1.5 rounded-md text-xs font-medium transition-colors flex items-center gap-2">
+                    <i class="fa-solid fa-clock-rotate-left"></i> Conta Santander
+                </button>
+                <button onclick="Handlers.switchTab('santander')" id="btn-santander" class="subtab-inactive px-3 py-1.5 rounded-md text-xs font-medium transition-colors flex items-center gap-2 text-rose-600 dark:text-rose-400">
+                    <i class="fa-brands fa-cc-mastercard"></i> Cartão Santander
+                </button>
+                <button onclick="Handlers.switchTab('expenses')" id="btn-expenses" class="subtab-inactive px-3 py-1.5 rounded-md text-xs font-medium transition-colors flex items-center gap-2">
+                    <i class="fa-solid fa-receipt"></i> Outros
+                </button>
+            </div>
+        </div>
     </header>
 
     <main class="flex-1 overflow-y-auto p-4">
         <div class="max-w-4xl mx-auto">
-            
-           <section id="view-dashboard" class="hidden fade-in">
-                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
-                    <div>
-                        <h2 class="text-2xl font-bold text-gray-800 dark:text-white">Visão Geral</h2>
-                        <p class="text-sm text-gray-500 dark:text-gray-400">Resumo financeiro do mês atual</p>
-                    </div>
-                    <div class="bg-white dark:bg-gray-800 p-1 rounded-lg shadow-sm border border-gray-100 dark:border-gray-700">
-                        <span class="px-3 py-1 text-xs font-bold text-blue-600 dark:text-blue-400 uppercase tracking-wider" id="current-month-badge">...</span>
-                    </div>
-                </div>
-            
-                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
-                    <div class="bg-white p-5 rounded-xl card-shadow border-l-4 border-emerald-500 dark:bg-gray-800 transition-theme">
-                        <div class="flex justify-between items-start">
-                            <div>
-                                <p class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Receitas</p>
-                                <h3 class="text-2xl font-bold text-gray-800 dark:text-white val-privacy" id="dash-income">R$ 0,00</h3>
-                            </div>
-                            <div class="p-2 bg-emerald-50 rounded-lg dark:bg-emerald-900/30">
-                                <i class="fa-solid fa-arrow-trend-up text-emerald-600 dark:text-emerald-400"></i>
-                            </div>
-                        </div>
-                    </div>
-            
-                    <div class="bg-white p-5 rounded-xl card-shadow border-l-4 border-rose-500 dark:bg-gray-800 transition-theme">
-                        <div class="flex justify-between items-start">
-                            <div>
-                                <p class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Despesas</p>
-                                <h3 class="text-2xl font-bold text-gray-800 dark:text-white val-privacy" id="dash-expense">R$ 0,00</h3>
-                            </div>
-                            <div class="p-2 bg-rose-50 rounded-lg dark:bg-rose-900/30">
-                                <i class="fa-solid fa-arrow-trend-down text-rose-600 dark:text-rose-400"></i>
-                            </div>
-                        </div>
-                    </div>
-            
-                    <div class="bg-white p-5 rounded-xl card-shadow border-l-4 border-blue-500 dark:bg-gray-800 transition-theme">
-                        <div class="flex justify-between items-start">
-                            <div>
-                                <p class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Saldo Mensal</p>
-                                <h3 class="text-2xl font-bold text-gray-800 dark:text-white val-privacy" id="dash-balance">R$ 0,00</h3>
-                            </div>
-                            <div class="p-2 bg-blue-50 rounded-lg dark:bg-blue-900/30">
-                                <i class="fa-solid fa-wallet text-blue-600 dark:text-blue-400"></i>
-                            </div>
-                        </div>
+
+            <section id="view-dashboard" class="fade-in">
+            </section>
+
+            <section id="view-bradesco" class="hidden fade-in">
+                <div class="bg-white p-6 rounded-xl card-shadow dark:bg-gray-800 transition-theme mb-6">
+                    <div class="flex justify-between items-center mb-6"><h3 class="font-bold text-gray-800 dark:text-white text-lg"><i class="fa-solid fa-building-columns text-red-600 mr-2"></i> Extrato Bradesco</h3></div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-sm text-gray-500 dark:text-gray-400">
+                            <thead class="bg-gray-50 text-xs uppercase text-gray-700 dark:bg-gray-700 dark:text-gray-400">
+                                <tr>
+                                    <th class="px-3 py-2 rounded-l-lg">Data</th>
+                                    <th class="px-3 py-2">Tipo</th>
+                                    <th class="px-3 py-2">Categoria</th>
+                                    <th class="px-3 py-2">Descrição</th>
+                                    <th class="px-3 py-2 text-right">Valor</th>
+                                </tr>
+                            </thead>
+                            <tbody id="bradesco-table-body" class="divide-y divide-gray-100 dark:divide-gray-700"></tbody>
+                        </table>
                     </div>
                 </div>
-            
-                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                    <div class="lg:col-span-2 bg-white p-5 rounded-xl card-shadow dark:bg-gray-800 transition-theme">
-                        <h3 class="text-sm font-bold text-gray-700 dark:text-gray-200 mb-4">Fluxo Diário (Últimos 30 dias)</h3>
-                        <div class="w-full h-[300px] relative val-privacy">
-                            <canvas id="dashboardChart"></canvas>
-                        </div>
-                    </div>
-            
-                    <div class="bg-white p-5 rounded-xl card-shadow dark:bg-gray-800 transition-theme">
-                        <h3 class="text-sm font-bold text-gray-700 dark:text-gray-200 mb-4">Últimos Lançamentos</h3>
-                        <div class="overflow-y-auto max-h-[300px] pr-2 space-y-3" id="dash-recent-list">
-                            <div class="text-center text-xs text-gray-400 py-4">Carregando...</div>
-                        </div>
+            </section>
+
+            <section id="view-expenses" class="hidden fade-in">
+                <div class="bg-white p-6 rounded-xl card-shadow dark:bg-gray-800 transition-theme mb-6">
+                    <div class="flex justify-between items-center mb-6"><h3 class="font-bold text-gray-800 dark:text-white text-lg"><i class="fa-solid fa-receipt text-rose-500 mr-2"></i> Detalhamento - Outros</h3></div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-sm text-gray-500 dark:text-gray-400">
+                            <thead class="bg-gray-50 text-xs uppercase text-gray-700 dark:bg-gray-700 dark:text-gray-400">
+                                <tr>
+                                    <th class="px-3 py-2 rounded-l-lg">Data</th>
+                                    <th class="px-3 py-2">Categoria</th>
+                                    <th class="px-3 py-2">Descrição</th>
+                                    <th class="px-3 py-2 text-right">Valor</th>
+                                </tr>
+                            </thead>
+                            <tbody id="expenses-table-body" class="divide-y divide-gray-100 dark:divide-gray-700"></tbody>
+                        </table>
                     </div>
                 </div>
             </section>
@@ -140,9 +136,9 @@
                         <div id="month-filter-row" class="border-t border-gray-100 pt-3 dark:border-gray-700"><div class="flex justify-between items-center mb-2"><label class="block text-xs font-medium text-gray-500 dark:text-gray-400" id="month-filter-label">Filtrar Períodos</label></div><div id="month-buttons-container" class="flex flex-col gap-3"></div></div>
                     </div>
                 </div>
-                
+
                 <h3 class="text-sm font-bold text-gray-700 dark:text-gray-200 mb-3 px-1">Acumulados do período - Santander</h3>
-                
+
                 <div class="grid grid-cols-3 gap-3 mb-4">
                     <div class="bg-white p-3 rounded-xl card-shadow border-b-2 border-emerald-500 dark:bg-gray-800 transition-theme text-center"><p class="text-[10px] uppercase font-semibold text-gray-500 dark:text-gray-400">Receita</p><p class="text-sm sm:text-base font-bold text-emerald-600 dark:text-emerald-400 val-privacy" id="total-gains">R$ 0,00</p></div>
                     <div class="bg-white p-3 rounded-xl card-shadow border-b-2 border-rose-500 dark:bg-gray-800 transition-theme text-center"><p class="text-[10px] uppercase font-semibold text-gray-500 dark:text-gray-400">Gastos</p><p class="text-sm sm:text-base font-bold text-rose-600 dark:text-rose-400 val-privacy" id="total-costs">R$ 0,00</p></div>
@@ -202,7 +198,7 @@
                                 </div>
                             </div>
                         </div>
-                        
+
                         <div id="slider-container" class="bg-gray-50 p-4 rounded-xl border border-gray-100 dark:bg-gray-800/50 dark:border-gray-700 mt-2">
                             <h4 class="text-[10px] font-bold text-gray-400 uppercase mb-3">Diferença de tempo</h4>
                             <div id="slider-labels" class="flex justify-between text-[10px] font-bold text-gray-400 dark:text-gray-500 mb-2 uppercase tracking-wide"></div>
@@ -210,7 +206,7 @@
                             <div id="compare-diff-indicator" class="text-center text-xs font-medium text-gray-500 dark:text-gray-400 mt-2"></div>
                         </div>
                     </div>
-                    
+
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
                         <div class="md:col-span-2 bg-gray-50 dark:bg-gray-900/50 p-3 rounded-lg border border-gray-100 dark:border-gray-700 h-80 flex flex-col">
                             <h4 class="text-xs font-semibold text-gray-500 uppercase mb-1 dark:text-gray-400">Fluxo de Caixa Comparativo</h4>
@@ -249,6 +245,10 @@
                 </div>
             </section>
 
+            <section id="view-history" class="hidden fade-in">
+                <div class="bg-white p-6 rounded-xl card-shadow dark:bg-gray-800 transition-theme mb-6">
+                   <div class="flex justify-between items-center mb-6"><h3 class="font-bold text-gray-800 dark:text-white text-lg"><i class="fa-solid fa-clock-rotate-left text-gray-500 mr-2"></i> Conta Santander</h3><span class="text-xs text-gray-400 font-normal">Base Unificada</span></div>
+                   <div class="overflow-x-auto"><table class="w-full text-left text-sm text-gray-500 dark:text-gray-400"><thead class="bg-gray-50 text-xs uppercase text-gray-700 dark:bg-gray-700 dark:text-gray-400"><tr><th class="px-3 py-2 rounded-l-lg">Data</th><th class="px-3 py-2">Tipo</th><th class="px-3 py-2">Categoria</th><th class="px-3 py-2">Descrição</th><th class="px-3 py-2 text-right rounded-r-lg">Valor</th></tr></thead><tbody id="history-table-body" class="divide-y divide-gray-100 dark:divide-gray-700"></tbody></table></div>
             <section id="view-data" class="hidden fade-in p-4 sm:p-6 mb-20">
                <div class="flex flex-col sm:flex-row justify-between items-center mb-6 gap-4">
                     <h2 class="text-xl font-bold text-gray-800 dark:text-white">Dados & Auditoria</h2>
@@ -268,7 +268,12 @@
                         </button>
                     </div>
                 </div>
+            </section>
 
+            <section id="view-santander" class="hidden fade-in">
+                <div class="bg-white p-6 rounded-xl card-shadow dark:bg-gray-800 transition-theme mb-6">
+                   <div class="flex justify-between items-center mb-6"><h3 class="font-bold text-gray-800 dark:text-white text-lg flex items-center gap-2"><i class="fa-brands fa-cc-mastercard text-rose-600"></i> Fatura Santander</h3><span class="text-xs text-gray-400 font-normal" id="santander-status">Carregando...</span></div>
+                   <div class="overflow-x-auto"><table class="w-full text-left text-sm text-gray-500 dark:text-gray-400"><thead id="santander-table-head" class="bg-gray-50 text-xs uppercase text-gray-700 dark:bg-gray-700 dark:text-gray-400"></thead><tbody id="santander-table-body" class="divide-y divide-gray-100 dark:divide-gray-700"></tbody></table></div>
                 <div id="subview-audit" class="subview-container fade-in">
                     <div class="bg-blue-50 border-l-4 border-blue-500 p-4 mb-6 rounded-r-lg dark:bg-blue-900/20 dark:border-blue-700">
                         <p class="text-xs text-blue-700 dark:text-blue-300">
@@ -302,6 +307,12 @@
                         </div>
                     </div>
                 </div>
+            </section>
+
+            <section id="view-consolidated" class="hidden fade-in">
+                <div class="bg-white p-6 rounded-xl card-shadow dark:bg-gray-800 transition-theme mb-6">
+                   <div class="flex justify-between items-center mb-6"><h3 class="font-bold text-gray-800 dark:text-white text-lg flex items-center gap-2"><i class="fa-solid fa-layer-group text-indigo-600"></i> Extrato Consolidado</h3><span class="text-xs text-gray-400 font-normal">Conta + Cartões (Sem Duplicidade)</span></div>
+                   <div class="overflow-x-auto"><table class="w-full text-left text-sm text-gray-500 dark:text-gray-400"><thead class="bg-gray-50 text-xs uppercase text-gray-700 dark:bg-gray-700 dark:text-gray-400"><tr><th class="px-3 py-2 rounded-l-lg">Data</th><th class="px-3 py-2">Origem</th><th class="px-3 py-2">Descrição</th><th class="px-3 py-2">Categoria</th><th class="px-3 py-2 text-right rounded-r-lg">Valor</th></tr></thead><tbody id="consolidated-table-body" class="divide-y divide-gray-100 dark:divide-gray-700"></tbody></table></div>
             
                 <div id="subview-bank" class="subview-container hidden fade-in">
                     <div class="bg-white rounded-xl shadow-sm border border-gray-100 dark:bg-gray-800 dark:border-gray-700 overflow-hidden">
@@ -322,6 +333,7 @@
                     </div>
                 </div>
             </section>
+
         </div>
     </main>
 
@@ -331,15 +343,13 @@
     <script src="js/core/DataService.js"></script>
     <script src="js/core/ChartManager.js"></script>
     <script src="js/core/UI.js"></script>
-    
+
     <script src="js/modules/Dashboard.js"></script>
     <script src="js/modules/Report.js"></script>
     <script src="js/modules/Compare.js"></script>
     <script src="js/modules/Goals.js"></script>
     <script src="js/modules/Tables.js"></script>
-    
+
     <script src="js/main.js"></script>
 </body>
 </html>
-
-
