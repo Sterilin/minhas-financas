@@ -1,65 +1,70 @@
 const UI = {
-    getCategoryColor(name) {
-        if(!name) return 'bg-gray-400';
-        if (AppParams.colors.categories[name]) return AppParams.colors.categories[name];
-        
-        const colors = ['bg-blue-500', 'bg-emerald-500', 'bg-violet-500', 'bg-amber-500', 'bg-rose-500', 'bg-cyan-500', 'bg-fuchsia-500', 'bg-indigo-500', 'bg-teal-500', 'bg-lime-600', 'bg-orange-500', 'bg-sky-500'];
-        let hash = 0;
-        for (let i = 0; i < name.length; i++) { hash = name.charCodeAt(i) + ((hash << 5) - hash); }
-        return colors[Math.abs(hash) % colors.length];
-    },
+    // Lista de abas que existem no HTML atual
+    validTabs: ['dashboard', 'report', 'compare', 'goals', 'data'],
 
-    toggleTheme() {
-        AppState.isDark = !AppState.isDark;
-        document.documentElement.classList.toggle('dark', AppState.isDark);
-        Utils.DOM.updateHTML('btn-theme', AppState.isDark ? '<i class="fa-regular fa-sun"></i>' : '<i class="fa-regular fa-moon"></i>');
-        ChartManager.updateTheme();
-        document.dispatchEvent(new CustomEvent('themeChanged'));
-    },
-
-    togglePrivacy() {
-        AppState.isPrivacy = !AppState.isPrivacy;
-        document.body.classList.toggle('privacy-active', AppState.isPrivacy);
-        Utils.DOM.updateHTML('btn-privacy', AppState.isPrivacy ? '<i class="fa-regular fa-eye-slash"></i>' : '<i class="fa-regular fa-eye"></i>');
+    init() {
+        // Pode adicionar listeners globais de UI aqui se necessário
     },
 
     switchTab(tabName) {
-        // Esconder todos
-        document.querySelectorAll('section[id^="view-"]').forEach(el => el.classList.add('hidden'));
-        document.querySelectorAll('button[id^="btn-"]').forEach(el => {
-            if (el.id.includes('dashboard') || el.id.includes('report') || el.id.includes('compare') || el.id.includes('goals') || el.id ===('btn-data')) {
-                 el.className = 'tab-inactive py-3 px-1 transition-colors flex items-center gap-2 shrink-0 text-sm font-medium';
-            }
-        });
-        
-        // Destacar aba principal ativa
-        let mainBtn = Utils.DOM.get(`btn-${tabName}`);
-        
-        // Se for sub-aba de dados, destaca o botão pai "Dados"
-        const isSubNav = ['expenses', 'history', 'santander', 'consolidated', 'bradesco'].includes(tabName);
-        if (isSubNav) mainBtn = Utils.DOM.get('btn-data');
-        
-        if(mainBtn) mainBtn.className = 'tab-active py-3 px-1 transition-colors flex items-center gap-2 shrink-0 text-sm font-medium';
-        
-        // Mostrar atual
-        const view = Utils.DOM.get(`view-${tabName}`);
-        if(view) view.classList.remove('hidden');
-        
-        // Lógica da Sub-navegação
-        Utils.DOM.get('sub-nav-data').classList.toggle('hidden', !isSubNav);
-        
-        if (isSubNav) {
-            Utils.DOM.get('btn-data').className = 'tab-active py-3 px-1 transition-colors flex items-center gap-2 shrink-0 text-sm font-medium';
-            // Atualizada lista de sub-abas
-            ['expenses', 'history', 'santander', 'consolidated', 'bradesco'].forEach(sub => {
-                const b = Utils.DOM.get(`btn-${sub}`);
-                if(b) b.className = `px-3 py-1.5 rounded-md text-xs font-medium transition-colors flex items-center gap-2 ${tabName === sub ? 'subtab-active' : 'subtab-inactive'}`;
-            });
+        // 1. Validação de Segurança
+        // Se tentar abrir uma aba que não existe, para o código antes de quebrar
+        const targetSection = document.getElementById(`view-${tabName}`);
+        if (!targetSection) {
+            console.warn(`UI Error: Tentativa de acessar aba inexistente 'view-${tabName}'`);
+            return;
         }
 
+        // 2. Esconde TODAS as seções válidas
+        this.validTabs.forEach(tab => {
+            const el = document.getElementById(`view-${tab}`);
+            if (el) {
+                el.classList.add('hidden');
+                // Remove animações para reiniciar quando abrir novamente
+                el.classList.remove('fade-in'); 
+            }
+        });
+
+        // 3. Mostra APENAS a seção alvo
+        targetSection.classList.remove('hidden');
+        targetSection.classList.add('fade-in'); // Adiciona efeito de entrada
+
+        // 4. Atualiza os Botões do Menu (Estilo Ativo/Inativo)
+        this.updateNavButtons(tabName);
+
+        // 5. Avisa o sistema que a aba mudou (Importante para carregar tabelas/gráficos)
         document.dispatchEvent(new CustomEvent('tabChanged', { detail: { tab: tabName } }));
         
-        ChartManager.resize();
+        // Salva a aba atual no Estado (opcional, mas bom para UX)
+        if(window.AppState) AppState.currentTab = tabName;
+    },
+
+    updateNavButtons(activeTab) {
+        // Lista de botões no menu superior
+        const buttons = ['dashboard', 'report', 'compare', 'goals', 'data'];
+
+        buttons.forEach(btnName => {
+            const btn = document.getElementById(`btn-${btnName}`);
+            if (!btn) return;
+
+            if (btnName === activeTab) {
+                // Estilos de Botão Ativo (Azul / Destaque)
+                // Remove estilos inativos
+                btn.classList.remove('text-gray-500', 'hover:text-gray-700', 'tab-inactive');
+                // Adiciona estilos ativos (borda inferior ou cor)
+                btn.classList.add('text-blue-600', 'dark:text-blue-400', 'tab-active');
+                
+                // Se o seu CSS usa border-bottom para tab-active:
+                btn.style.borderBottomColor = 'currentColor'; 
+            } else {
+                // Estilos de Botão Inativo
+                btn.classList.remove('text-blue-600', 'dark:text-blue-400', 'tab-active');
+                btn.classList.add('text-gray-500', 'hover:text-gray-700', 'tab-inactive');
+                
+                btn.style.borderBottomColor = 'transparent';
+            }
+        });
     }
 };
+
 window.UI = UI;
