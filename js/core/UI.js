@@ -1,66 +1,83 @@
 const UI = {
-    // Lista de abas que existem no HTML atual
+    // Define as abas esperadas pelo sistema
     validTabs: ['dashboard', 'report', 'compare', 'goals', 'data'],
 
     init() {
-        // Pode adicionar listeners globais de UI aqui se necessário
+        // Inicializações globais de UI se necessário
+    },
+
+    toggleTheme() {
+        document.documentElement.classList.toggle('dark');
+        // Salva preferência (opcional)
+        const isDark = document.documentElement.classList.contains('dark');
+        localStorage.setItem('theme', isDark ? 'dark' : 'light');
+    },
+
+    togglePrivacy() {
+        const body = document.getElementById('app-body');
+        if (body) body.classList.toggle('privacy-active');
+        
+        const btn = document.getElementById('btn-privacy');
+        if (btn) {
+            const icon = btn.querySelector('i');
+            if (icon) {
+                if (body && body.classList.contains('privacy-active')) {
+                    icon.className = 'fa-regular fa-eye-slash';
+                } else {
+                    icon.className = 'fa-regular fa-eye';
+                }
+            }
+        }
     },
 
     switchTab(tabName) {
-        // 1. Validação de Segurança
-        // Se tentar abrir uma aba que não existe, para o código antes de quebrar
-        const targetSection = document.getElementById(`view-${tabName}`);
+        // 1. SEGURANÇA: Verifica se a aba alvo existe no HTML
+        const targetId = `view-${tabName}`;
+        const targetSection = document.getElementById(targetId);
+
         if (!targetSection) {
-            console.warn(`UI Error: Tentativa de acessar aba inexistente 'view-${tabName}'`);
-            return;
+            console.warn(`⚠️ UI: A seção '${targetId}' não foi encontrada no HTML. Verifique o index.html.`);
+            return; // Impede o crash
         }
 
-        // 2. Esconde TODAS as seções válidas
+        // 2. Esconde todas as abas válidas
         this.validTabs.forEach(tab => {
             const el = document.getElementById(`view-${tab}`);
             if (el) {
                 el.classList.add('hidden');
-                // Remove animações para reiniciar quando abrir novamente
-                el.classList.remove('fade-in'); 
+                el.classList.remove('fade-in');
             }
         });
 
-        // 3. Mostra APENAS a seção alvo
+        // 3. Mostra a aba alvo
         targetSection.classList.remove('hidden');
-        targetSection.classList.add('fade-in'); // Adiciona efeito de entrada
+        targetSection.classList.add('fade-in');
 
-        // 4. Atualiza os Botões do Menu (Estilo Ativo/Inativo)
+        // 4. Atualiza os botões do menu
         this.updateNavButtons(tabName);
 
-        // 5. Avisa o sistema que a aba mudou (Importante para carregar tabelas/gráficos)
+        // 5. Dispara evento para carregar gráficos/tabelas
         document.dispatchEvent(new CustomEvent('tabChanged', { detail: { tab: tabName } }));
         
-        // Salva a aba atual no Estado (opcional, mas bom para UX)
         if(window.AppState) AppState.currentTab = tabName;
     },
 
     updateNavButtons(activeTab) {
-        // Lista de botões no menu superior
-        const buttons = ['dashboard', 'report', 'compare', 'goals', 'data'];
-
-        buttons.forEach(btnName => {
+        this.validTabs.forEach(btnName => {
             const btn = document.getElementById(`btn-${btnName}`);
+            
+            // SEGURANÇA: Se o botão não existir no HTML, pula
             if (!btn) return;
 
             if (btnName === activeTab) {
-                // Estilos de Botão Ativo (Azul / Destaque)
-                // Remove estilos inativos
+                // Ativo
                 btn.classList.remove('text-gray-500', 'hover:text-gray-700', 'tab-inactive');
-                // Adiciona estilos ativos (borda inferior ou cor)
                 btn.classList.add('text-blue-600', 'dark:text-blue-400', 'tab-active');
-                
-                // Se o seu CSS usa border-bottom para tab-active:
-                btn.style.borderBottomColor = 'currentColor'; 
+                btn.style.borderBottomColor = 'currentColor';
             } else {
-                // Estilos de Botão Inativo
+                // Inativo
                 btn.classList.remove('text-blue-600', 'dark:text-blue-400', 'tab-active');
                 btn.classList.add('text-gray-500', 'hover:text-gray-700', 'tab-inactive');
-                
                 btn.style.borderBottomColor = 'transparent';
             }
         });
