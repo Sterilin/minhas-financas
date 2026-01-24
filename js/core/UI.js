@@ -30,6 +30,15 @@ const UI = {
         }
     },
 
+    // --- FUNÇÃO QUE FALTAVA ---
+    getCategoryColor(category) {
+        // Verifica se a categoria e os parâmetros existem para evitar erros
+        if (!category || !window.AppParams || !AppParams.colors || !AppParams.colors.categories) {
+            return 'bg-gray-400'; // Cor padrão caso não encontre
+        }
+        return AppParams.colors.categories[category] || 'bg-gray-400';
+    },
+
     switchTab(tabName) {
         // 1. SEGURANÇA: Verifica se a aba alvo existe no HTML
         const targetId = `view-${tabName}`;
