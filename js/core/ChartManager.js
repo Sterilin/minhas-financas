@@ -146,19 +146,31 @@ const ChartManager = {
         if (AppState.charts.inflation) AppState.charts.inflation.destroy();
         const colors = this.getColors();
         
+        // CORREÇÃO: Mapa expandido para incluir tons 400, 600 e cores faltantes (Purple, Blue-400, etc)
         const tailwindMap = {
-            'bg-blue-500': '#3b82f6', 'bg-emerald-500': '#10b981', 'bg-violet-500': '#8b5cf6', 
-            'bg-amber-500': '#f59e0b', 'bg-rose-500': '#f43f5e', 'bg-cyan-500': '#06b6d4', 
-            'bg-fuchsia-500': '#d946ef', 'bg-indigo-500': '#6366f1', 'bg-teal-500': '#14b8a6', 
-            'bg-lime-600': '#65a30d', 'bg-orange-500': '#f97316', 'bg-sky-500': '#0ea5e9',
-            'bg-gray-400': '#9ca3af'
+            // Reds/Pinks
+            'bg-rose-500': '#f43f5e', 'bg-red-500': '#ef4444', 'bg-pink-500': '#ec4899',
+            // Oranges/Yellows
+            'bg-orange-400': '#fb923c', 'bg-orange-500': '#f97316', 'bg-amber-500': '#f59e0b', 'bg-yellow-500': '#eab308',
+            // Greens
+            'bg-emerald-500': '#10b981', 'bg-emerald-600': '#059669', 'bg-green-500': '#22c55e', 'bg-lime-600': '#65a30d', 'bg-teal-500': '#14b8a6',
+            // Blues
+            'bg-blue-400': '#60a5fa', 'bg-blue-500': '#3b82f6', 'bg-sky-500': '#0ea5e9', 'bg-cyan-500': '#06b6d4',
+            // Purples
+            'bg-purple-500': '#a855f7', 'bg-violet-500': '#8b5cf6', 'bg-fuchsia-500': '#d946ef', 'bg-indigo-500': '#6366f1',
+            // Grays
+            'bg-gray-400': '#9ca3af', 'bg-slate-500': '#64748b'
         };
+
         const datasets = breakdown.categories.map(cat => {
             const data = breakdown.data.map(monthData => monthData[cat] || 0);
             const tailwindClass = UI.getCategoryColor(cat);
+            // Fallback melhorado
             const hexColor = tailwindMap[tailwindClass] || '#9ca3af';
+            
             return { label: cat, data: data, backgroundColor: hexColor, borderRadius: 2 };
         });
+
         AppState.charts.inflation = new Chart(ctx, {
             type: 'bar',
             data: { labels: breakdown.months, datasets: datasets },
