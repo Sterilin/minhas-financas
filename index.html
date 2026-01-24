@@ -250,89 +250,85 @@
                    <div class="flex justify-between items-center mb-6"><h3 class="font-bold text-gray-800 dark:text-white text-lg"><i class="fa-solid fa-clock-rotate-left text-gray-500 mr-2"></i> Conta Santander</h3><span class="text-xs text-gray-400 font-normal">Base Unificada</span></div>
                    <div class="overflow-x-auto"><table class="w-full text-left text-sm text-gray-500 dark:text-gray-400"><thead class="bg-gray-50 text-xs uppercase text-gray-700 dark:bg-gray-700 dark:text-gray-400"><tr><th class="px-3 py-2 rounded-l-lg">Data</th><th class="px-3 py-2">Tipo</th><th class="px-3 py-2">Categoria</th><th class="px-3 py-2">Descrição</th><th class="px-3 py-2 text-right rounded-r-lg">Valor</th></tr></thead><tbody id="history-table-body" class="divide-y divide-gray-100 dark:divide-gray-700"></tbody></table></div>
             <section id="view-data" class="hidden fade-in p-4 sm:p-6 mb-20">
-               <div class="flex flex-col sm:flex-row justify-between items-center mb-6 gap-4">
-                    <h2 class="text-xl font-bold text-gray-800 dark:text-white">Dados & Auditoria</h2>
+            <!-- Cabeçalho da Aba Dados -->
+            <div class="flex flex-col sm:flex-row justify-between items-center mb-6 gap-4">
+                <h2 class="text-xl font-bold text-gray-800 dark:text-white">Dados & Auditoria</h2>
         
-                    <div class="flex bg-gray-100 dark:bg-gray-700 p-1 rounded-lg overflow-x-auto max-w-full">
-                        <button onclick="Tables.switchSubTab('audit')" id="tab-btn-audit" class="px-3 py-1.5 text-xs font-medium rounded-md transition-all shadow-sm bg-white text-gray-800 dark:bg-gray-600 dark:text-white whitespace-nowrap">
-                            Auditoria (Mês)
-                        </button>
-                        <button onclick="Tables.switchSubTab('bradesco')" id="tab-btn-bradesco" class="px-3 py-1.5 text-xs font-medium rounded-md transition-all text-gray-500 hover:text-gray-700 dark:text-gray-400 whitespace-nowrap">
-                            Bradesco
-                        </button>
-                        <button onclick="Tables.switchSubTab('santander-acc')" id="tab-btn-santander-acc" class="px-3 py-1.5 text-xs font-medium rounded-md transition-all text-gray-500 hover:text-gray-700 dark:text-gray-400 whitespace-nowrap">
-                            Santander Conta
-                        </button>
-                        <button onclick="Tables.switchSubTab('santander-card')" id="tab-btn-santander-card" class="px-3 py-1.5 text-xs font-medium rounded-md transition-all text-gray-500 hover:text-gray-700 dark:text-gray-400 whitespace-nowrap">
-                            Fatura
-                        </button>
-                    </div>
+                <!-- Menu de Sub-abas -->
+                <div class="flex bg-gray-100 dark:bg-gray-700 p-1 rounded-lg overflow-x-auto max-w-full">
+                    <button onclick="Tables.switchSubTab('audit')" id="tab-btn-audit" class="px-3 py-1.5 text-xs font-medium rounded-md transition-all shadow-sm bg-white text-gray-800 dark:bg-gray-600 dark:text-white whitespace-nowrap">
+                        Auditoria (Mês)
+                    </button>
+                    <button onclick="Tables.switchSubTab('bradesco')" id="tab-btn-bradesco" class="px-3 py-1.5 text-xs font-medium rounded-md transition-all text-gray-500 hover:text-gray-700 dark:text-gray-400 whitespace-nowrap">
+                        Bradesco
+                    </button>
+                    <button onclick="Tables.switchSubTab('santander-acc')" id="tab-btn-santander-acc" class="px-3 py-1.5 text-xs font-medium rounded-md transition-all text-gray-500 hover:text-gray-700 dark:text-gray-400 whitespace-nowrap">
+                        Santander Conta
+                    </button>
+                    <button onclick="Tables.switchSubTab('santander-card')" id="tab-btn-santander-card" class="px-3 py-1.5 text-xs font-medium rounded-md transition-all text-gray-500 hover:text-gray-700 dark:text-gray-400 whitespace-nowrap">
+                        Fatura
+                    </button>
                 </div>
-            </section>
-
-            <section id="view-santander" class="hidden fade-in">
-                <div class="bg-white p-6 rounded-xl card-shadow dark:bg-gray-800 transition-theme mb-6">
-                   <div class="flex justify-between items-center mb-6"><h3 class="font-bold text-gray-800 dark:text-white text-lg flex items-center gap-2"><i class="fa-brands fa-cc-mastercard text-rose-600"></i> Fatura Santander</h3><span class="text-xs text-gray-400 font-normal" id="santander-status">Carregando...</span></div>
-                   <div class="overflow-x-auto"><table class="w-full text-left text-sm text-gray-500 dark:text-gray-400"><thead id="santander-table-head" class="bg-gray-50 text-xs uppercase text-gray-700 dark:bg-gray-700 dark:text-gray-400"></thead><tbody id="santander-table-body" class="divide-y divide-gray-100 dark:divide-gray-700"></tbody></table></div>
-                <div id="subview-audit" class="subview-container fade-in">
-                    <div class="bg-blue-50 border-l-4 border-blue-500 p-4 mb-6 rounded-r-lg dark:bg-blue-900/20 dark:border-blue-700">
-                        <p class="text-xs text-blue-700 dark:text-blue-300">
-                            <strong>Raio-X do Mês:</strong> Estas são as transações exatas somadas para compor o seu Resumo Financeiro atual. Itens ignorados não aparecem aqui.
-                        </p>
-                    </div>
-            
-                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                        <div class="bg-white rounded-xl shadow-sm border border-gray-100 dark:bg-gray-800 dark:border-gray-700 overflow-hidden flex flex-col h-[500px]">
-                            <div class="bg-emerald-50 dark:bg-emerald-900/30 px-4 py-3 border-b border-emerald-100 dark:border-emerald-800 flex justify-between items-center shrink-0">
-                                <h3 class="font-bold text-emerald-700 dark:text-emerald-400 text-sm">Receitas do Mês</h3>
-                                <span class="text-xs font-bold text-emerald-600 dark:text-emerald-300 bg-white dark:bg-gray-800 px-2 py-1 rounded border border-emerald-200 dark:border-emerald-800" id="audit-income-total">R$ 0,00</span>
-                            </div>
-                            <div class="overflow-y-auto flex-1 p-0">
-                                <table class="w-full text-left border-collapse">
-                                    <tbody id="audit-income-body"></tbody>
-                                </table>
-                            </div>
-                        </div>
-            
-                        <div class="bg-white rounded-xl shadow-sm border border-gray-100 dark:bg-gray-800 dark:border-gray-700 overflow-hidden flex flex-col h-[500px]">
-                            <div class="bg-rose-50 dark:bg-rose-900/30 px-4 py-3 border-b border-rose-100 dark:border-rose-800 flex justify-between items-center shrink-0">
-                                <h3 class="font-bold text-rose-700 dark:text-rose-400 text-sm">Gastos do Mês</h3>
-                                <span class="text-xs font-bold text-rose-600 dark:text-rose-300 bg-white dark:bg-gray-800 px-2 py-1 rounded border border-rose-200 dark:border-rose-800" id="audit-expense-total">R$ 0,00</span>
-                            </div>
-                            <div class="overflow-y-auto flex-1 p-0">
-                                <table class="w-full text-left border-collapse">
-                                    <tbody id="audit-expense-body"></tbody>
-                                </table>
-                            </div>
-                        </div>
-                    </div>
+            </div>
+        
+            <!-- 1. SUB-VISÃO: AUDITORIA -->
+            <div id="subview-audit" class="subview-container fade-in">
+                <div class="bg-blue-50 border-l-4 border-blue-500 p-4 mb-6 rounded-r-lg dark:bg-blue-900/20 dark:border-blue-700">
+                    <p class="text-xs text-blue-700 dark:text-blue-300">
+                        <strong>Raio-X do Mês:</strong> Estas são as transações exatas somadas para compor o seu Resumo Financeiro atual. Itens ignorados não aparecem aqui.
+                    </p>
                 </div>
-            </section>
-
-            <section id="view-consolidated" class="hidden fade-in">
-                <div class="bg-white p-6 rounded-xl card-shadow dark:bg-gray-800 transition-theme mb-6">
-                   <div class="flex justify-between items-center mb-6"><h3 class="font-bold text-gray-800 dark:text-white text-lg flex items-center gap-2"><i class="fa-solid fa-layer-group text-indigo-600"></i> Extrato Consolidado</h3><span class="text-xs text-gray-400 font-normal">Conta + Cartões (Sem Duplicidade)</span></div>
-                   <div class="overflow-x-auto"><table class="w-full text-left text-sm text-gray-500 dark:text-gray-400"><thead class="bg-gray-50 text-xs uppercase text-gray-700 dark:bg-gray-700 dark:text-gray-400"><tr><th class="px-3 py-2 rounded-l-lg">Data</th><th class="px-3 py-2">Origem</th><th class="px-3 py-2">Descrição</th><th class="px-3 py-2">Categoria</th><th class="px-3 py-2 text-right rounded-r-lg">Valor</th></tr></thead><tbody id="consolidated-table-body" class="divide-y divide-gray-100 dark:divide-gray-700"></tbody></table></div>
-            
-                <div id="subview-bank" class="subview-container hidden fade-in">
-                    <div class="bg-white rounded-xl shadow-sm border border-gray-100 dark:bg-gray-800 dark:border-gray-700 overflow-hidden">
-                        <div class="overflow-x-auto">
+        
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <!-- Tabela Receitas -->
+                    <div class="bg-white rounded-xl shadow-sm border border-gray-100 dark:bg-gray-800 dark:border-gray-700 overflow-hidden flex flex-col h-[500px]">
+                        <div class="bg-emerald-50 dark:bg-emerald-900/30 px-4 py-3 border-b border-emerald-100 dark:border-emerald-800 flex justify-between items-center shrink-0">
+                            <h3 class="font-bold text-emerald-700 dark:text-emerald-400 text-sm">Receitas do Mês</h3>
+                            <span class="text-xs font-bold text-emerald-600 dark:text-emerald-300 bg-white dark:bg-gray-800 px-2 py-1 rounded border border-emerald-200 dark:border-emerald-800" id="audit-income-total">R$ 0,00</span>
+                        </div>
+                        <div class="overflow-y-auto flex-1 p-0">
                             <table class="w-full text-left border-collapse">
-                                <thead class="bg-gray-50 dark:bg-gray-700 border-b border-gray-200 dark:border-gray-600">
-                                    <tr>
-                                        <th class="px-4 py-3 text-[10px] font-bold text-gray-400 uppercase tracking-wider w-24">Data</th>
-                                        <th class="px-4 py-3 text-[10px] font-bold text-gray-400 uppercase tracking-wider">Descrição</th>
-                                        <th class="px-4 py-3 text-[10px] font-bold text-gray-400 uppercase tracking-wider w-32">Categoria</th>
-                                        <th class="px-4 py-3 text-[10px] font-bold text-gray-400 uppercase tracking-wider text-right w-28">Valor</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="bank-table-body">
-                                    </tbody>
+                                <tbody id="audit-income-body"></tbody>
+                            </table>
+                        </div>
+                    </div>
+        
+                    <!-- Tabela Despesas -->
+                    <div class="bg-white rounded-xl shadow-sm border border-gray-100 dark:bg-gray-800 dark:border-gray-700 overflow-hidden flex flex-col h-[500px]">
+                        <div class="bg-rose-50 dark:bg-rose-900/30 px-4 py-3 border-b border-rose-100 dark:border-rose-800 flex justify-between items-center shrink-0">
+                            <h3 class="font-bold text-rose-700 dark:text-rose-400 text-sm">Gastos do Mês</h3>
+                            <span class="text-xs font-bold text-rose-600 dark:text-rose-300 bg-white dark:bg-gray-800 px-2 py-1 rounded border border-rose-200 dark:border-rose-800" id="audit-expense-total">R$ 0,00</span>
+                        </div>
+                        <div class="overflow-y-auto flex-1 p-0">
+                            <table class="w-full text-left border-collapse">
+                                <tbody id="audit-expense-body"></tbody>
                             </table>
                         </div>
                     </div>
                 </div>
-            </section>
+            </div>
+        
+            <!-- 2. SUB-VISÃO: TABELAS DE BANCO -->
+            <div id="subview-bank" class="subview-container hidden fade-in">
+                <div class="bg-white rounded-xl shadow-sm border border-gray-100 dark:bg-gray-800 dark:border-gray-700 overflow-hidden">
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left border-collapse">
+                            <thead class="bg-gray-50 dark:bg-gray-700 border-b border-gray-200 dark:border-gray-600">
+                                <tr>
+                                    <th class="px-4 py-3 text-[10px] font-bold text-gray-400 uppercase tracking-wider w-24">Data</th>
+                                    <th class="px-4 py-3 text-[10px] font-bold text-gray-400 uppercase tracking-wider">Descrição</th>
+                                    <th class="px-4 py-3 text-[10px] font-bold text-gray-400 uppercase tracking-wider w-32">Categoria</th>
+                                    <th class="px-4 py-3 text-[10px] font-bold text-gray-400 uppercase tracking-wider text-right w-28">Valor</th>
+                                </tr>
+                            </thead>
+                            <tbody id="bank-table-body">
+                                <!-- JS preenche aqui -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </section>
 
         </div>
     </main>
@@ -353,3 +349,4 @@
     <script src="js/main.js"></script>
 </body>
 </html>
+
