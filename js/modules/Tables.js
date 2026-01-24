@@ -3,23 +3,22 @@ const Tables = {
 
     init() {
         // Tenta renderizar assim que inicia
-        this.render();
-
-        // Se inscreve para atualizações de dados
-        if (window.DataService && typeof DataService.subscribe === 'function') {
+        if (window.DataService) {
             DataService.subscribe(() => this.render());
         }
 
         // Ouve a troca de abas do menu principal
         document.addEventListener('tabChanged', (e) => {
             if (e.detail && e.detail.tab === 'data') {
-                // Pequeno delay para garantir que o DOM está visível
-                setTimeout(() => this.render(), 50);
+                // Remove hidden explicitamente antes de renderizar para garantir
+                const container = document.getElementById('view-data');
+                if (container) container.classList.remove('hidden');
+                
+                this.render();
             }
         });
     },
 
-    // Chamado pelos botões do submenu no HTML
     switchSubTab(tabName) {
         this.currentSubTab = tabName;
         
@@ -36,7 +35,7 @@ const Tables = {
             }
         });
 
-        // 2. Alterna a visibilidade das áreas (Auditoria vs Tabelas)
+        // 2. Alterna a visibilidade das áreas
         const auditView = document.getElementById('subview-audit');
         const bankView = document.getElementById('subview-bank');
 
@@ -48,12 +47,12 @@ const Tables = {
             if(bankView) bankView.classList.remove('hidden');
         }
 
-        // 3. Renderiza o conteúdo da aba selecionada
+        // 3. Renderiza
         this.render();
     },
 
     render() {
-        // Só processa se a aba 'Dados' estiver visível
+        // Verifica se a aba pai está ativa
         const container = document.getElementById('view-data');
         if (!container || container.classList.contains('hidden')) return;
 
@@ -64,44 +63,39 @@ const Tables = {
         }
     },
 
-    // --- LÓGICA DA AUDITORIA (Cálculo do Mês Atual) ---
     renderAudit() {
         const incomeBody = document.getElementById('audit-income-body');
         const expenseBody = document.getElementById('audit-expense-body');
         
-        // Se os elementos não existirem no HTML, para a execução
         if (!incomeBody || !expenseBody) return;
 
-        // Pega período atual do DataService
-        const latest = DataService.getLatestPeriod(); // {year, month}
+        // Limpa antes de preencher
+        incomeBody.innerHTML = '';
+        expenseBody.innerHTML = '';
+
+        const latest = DataService.getLatestPeriod();
         const year = latest.year;
         const month = latest.month;
 
-        // Junta todas as transações
         const allTrans = [
             ...(DataService.bradescoTransactions || []),
             ...(DataService.santanderAccountTransactions || []),
             ...(DataService.santanderCardTransactions || [])
         ];
 
-        // Filtra transações do Mês Fiscal Vigente
+        // Filtra transações do Mês Fiscal
         const activeTrans = allTrans.filter(t => {
-            // Lógica de data fiscal (dia 16 do mês anterior até 15 do atual)
             let m = t.date.getMonth();
             let y = t.date.getFullYear();
+            // Regra do dia 16
             if (t.date.getDate() >= 16) { m++; if (m > 11) { m = 0; y++; } }
             
             const isTargetMonth = (m === month && y === year);
-            
-            // Verifica se está na lista de ignorados (Config.js)
-            const isIgnored = AppParams.ignorePatterns.some(p => 
-                t.description.toLowerCase().includes(p)
-            );
+            const isIgnored = AppParams.ignorePatterns.some(p => t.description.toLowerCase().includes(p));
             
             return isTargetMonth && !isIgnored;
         });
 
-        // Separa Receitas e Despesas
         const incomeList = [];
         const expenseList = [];
 
@@ -110,10 +104,8 @@ const Tables = {
             let val = 0;
 
             if (t.source === 'santander_card') {
-                // No cartão, type='expense' é gasto
                 if (t.type === 'expense') { isExpense = true; val = t.value; }
             } else {
-                // Em contas, valor negativo é gasto
                 if (t.value < 0) { isExpense = true; val = Math.abs(t.value); }
                 else { val = t.value; }
             }
@@ -125,11 +117,9 @@ const Tables = {
             }
         });
 
-        // Ordena por valor decrescente
         incomeList.sort((a,b) => b.absValue - a.absValue);
         expenseList.sort((a,b) => b.absValue - a.absValue);
 
-        // Função auxiliar para criar as linhas da tabela
         const renderRows = (list, colorClass) => {
             if (list.length === 0) return '<tr><td class="p-4 text-xs text-gray-400 text-center">Nenhum registro considerado neste período.</td></tr>';
             
@@ -148,11 +138,9 @@ const Tables = {
             `).join('');
         };
 
-        // Injeta o HTML
         incomeBody.innerHTML = renderRows(incomeList, 'text-emerald-600 dark:text-emerald-400');
         expenseBody.innerHTML = renderRows(expenseList, 'text-rose-600 dark:text-rose-400');
 
-        // Atualiza os totais nos cabeçalhos
         const totalInc = incomeList.reduce((acc, t) => acc + t.absValue, 0);
         const totalExp = expenseList.reduce((acc, t) => acc + t.absValue, 0);
         
@@ -160,7 +148,6 @@ const Tables = {
         Utils.DOM.updateText('audit-expense-total', Utils.formatCurrency(totalExp));
     },
 
-    // --- LÓGICA DAS TABELAS DE BANCO (Dados Brutos) ---
     renderBankTable(source) {
         const tbody = document.getElementById('bank-table-body');
         if (!tbody) return;
@@ -171,22 +158,21 @@ const Tables = {
         else if (source === 'santander-card') data = DataService.santanderCardTransactions || [];
 
         if (data.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="4" class="px-4 py-8 text-center text-xs text-gray-400">Nenhum dado encontrado para esta fonte.</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="4" class="px-4 py-8 text-center text-xs text-gray-400">Nenhum dado encontrado.</td></tr>';
             return;
         }
 
-        // Limita a exibição para não travar o navegador
-        const displayData = data.slice(0, 150);
+        // Limita renderização inicial para performance
+        const displayData = data.slice(0, 100);
 
         tbody.innerHTML = displayData.map(t => {
             let valClass = 'text-gray-800 dark:text-gray-200';
             let displayVal = t.value;
 
-            // Normaliza cores e sinais
             if (source === 'santander-card') {
                 if (t.type === 'expense') {
                     valClass = 'text-rose-600 dark:text-rose-400';
-                    displayVal = -Math.abs(t.value); // Mostra negativo visualmente
+                    displayVal = -Math.abs(t.value);
                 } else {
                     valClass = 'text-emerald-600 dark:text-emerald-400';
                 }
@@ -209,5 +195,4 @@ const Tables = {
     }
 };
 
-// Expõe globalmente
 window.Tables = Tables;
