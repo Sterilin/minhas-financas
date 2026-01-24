@@ -1,26 +1,29 @@
 const Tables = {
-    currentSubTab: 'audit', // Começa sempre na auditoria
+    currentSubTab: 'audit', // Aba padrão
 
     init() {
+        // Tenta renderizar assim que inicia
         this.render();
 
+        // Se inscreve para atualizações de dados
         if (window.DataService && typeof DataService.subscribe === 'function') {
             DataService.subscribe(() => this.render());
         }
 
-        // Quando trocar para a aba principal 'data', renderiza
+        // Ouve a troca de abas do menu principal
         document.addEventListener('tabChanged', (e) => {
-            if (e.detail.tab === 'data') {
-                this.render();
+            if (e.detail && e.detail.tab === 'data') {
+                // Pequeno delay para garantir que o DOM está visível
+                setTimeout(() => this.render(), 50);
             }
         });
     },
 
-    // Função para trocar as sub-abas (Botões internos)
+    // Chamado pelos botões do submenu no HTML
     switchSubTab(tabName) {
         this.currentSubTab = tabName;
         
-        // Atualiza estilo dos botões
+        // 1. Atualiza visual dos botões
         const buttons = ['audit', 'bradesco', 'santander-acc', 'santander-card'];
         buttons.forEach(btn => {
             const el = document.getElementById(`tab-btn-${btn}`);
@@ -33,7 +36,7 @@ const Tables = {
             }
         });
 
-        // Alterna visibilidade dos containers
+        // 2. Alterna a visibilidade das áreas (Auditoria vs Tabelas)
         const auditView = document.getElementById('subview-audit');
         const bankView = document.getElementById('subview-bank');
 
@@ -45,11 +48,12 @@ const Tables = {
             if(bankView) bankView.classList.remove('hidden');
         }
 
+        // 3. Renderiza o conteúdo da aba selecionada
         this.render();
     },
 
     render() {
-        // Verifica se a seção 'view-data' está visível antes de gastar processamento
+        // Só processa se a aba 'Dados' estiver visível
         const container = document.getElementById('view-data');
         if (!container || container.classList.contains('hidden')) return;
 
@@ -60,33 +64,44 @@ const Tables = {
         }
     },
 
-    // --- RENDERIZA A AUDITORIA (RECEITAS E GASTOS DO MÊS) ---
+    // --- LÓGICA DA AUDITORIA (Cálculo do Mês Atual) ---
     renderAudit() {
         const incomeBody = document.getElementById('audit-income-body');
         const expenseBody = document.getElementById('audit-expense-body');
         
-        if (!window.DataService || !incomeBody || !expenseBody) return;
+        // Se os elementos não existirem no HTML, para a execução
+        if (!incomeBody || !expenseBody) return;
 
-        const { year, month } = DataService.getLatestPeriod();
-        
+        // Pega período atual do DataService
+        const latest = DataService.getLatestPeriod(); // {year, month}
+        const year = latest.year;
+        const month = latest.month;
+
+        // Junta todas as transações
         const allTrans = [
             ...(DataService.bradescoTransactions || []),
             ...(DataService.santanderAccountTransactions || []),
             ...(DataService.santanderCardTransactions || [])
         ];
 
-        // Filtra: Apenas Mês Fiscal Atual e Não Ignorados
+        // Filtra transações do Mês Fiscal Vigente
         const activeTrans = allTrans.filter(t => {
+            // Lógica de data fiscal (dia 16 do mês anterior até 15 do atual)
             let m = t.date.getMonth();
             let y = t.date.getFullYear();
             if (t.date.getDate() >= 16) { m++; if (m > 11) { m = 0; y++; } }
             
             const isTargetMonth = (m === month && y === year);
-            const isIgnored = AppParams.ignorePatterns.some(p => t.description.toLowerCase().includes(p));
+            
+            // Verifica se está na lista de ignorados (Config.js)
+            const isIgnored = AppParams.ignorePatterns.some(p => 
+                t.description.toLowerCase().includes(p)
+            );
             
             return isTargetMonth && !isIgnored;
         });
 
+        // Separa Receitas e Despesas
         const incomeList = [];
         const expenseList = [];
 
@@ -95,8 +110,10 @@ const Tables = {
             let val = 0;
 
             if (t.source === 'santander_card') {
+                // No cartão, type='expense' é gasto
                 if (t.type === 'expense') { isExpense = true; val = t.value; }
             } else {
+                // Em contas, valor negativo é gasto
                 if (t.value < 0) { isExpense = true; val = Math.abs(t.value); }
                 else { val = t.value; }
             }
@@ -108,29 +125,34 @@ const Tables = {
             }
         });
 
+        // Ordena por valor decrescente
         incomeList.sort((a,b) => b.absValue - a.absValue);
         expenseList.sort((a,b) => b.absValue - a.absValue);
 
-        const renderRows = (list, isInc) => {
-            if (list.length === 0) return '<tr><td class="p-4 text-xs text-gray-400 text-center">Nenhum registro no período.</td></tr>';
+        // Função auxiliar para criar as linhas da tabela
+        const renderRows = (list, colorClass) => {
+            if (list.length === 0) return '<tr><td class="p-4 text-xs text-gray-400 text-center">Nenhum registro considerado neste período.</td></tr>';
+            
             return list.map(t => `
                 <tr class="border-b border-gray-50 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
-                    <td class="px-4 py-3">
+                    <td class="px-4 py-2">
                         <div class="flex justify-between items-start gap-2">
-                            <div>
-                                <p class="text-xs font-medium text-gray-800 dark:text-white truncate max-w-[180px] sm:max-w-[250px]" title="${t.description}">${t.description}</p>
-                                <p class="text-[10px] text-gray-400 mt-0.5">${t.date.toLocaleDateString()} • ${t.source === 'santander_card' ? 'Cartão' : 'Conta'}</p>
+                            <div class="overflow-hidden">
+                                <p class="text-xs font-medium text-gray-800 dark:text-white truncate" title="${t.description}">${t.description}</p>
+                                <p class="text-[10px] text-gray-400 mt-0.5">${t.date.toLocaleDateString()} • ${t.source === 'santander_card' ? 'Fatura' : 'Conta'}</p>
                             </div>
-                            <span class="text-xs font-bold ${isInc ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'} whitespace-nowrap val-privacy">${Utils.formatCurrency(t.absValue)}</span>
+                            <span class="text-xs font-bold ${colorClass} whitespace-nowrap val-privacy">${Utils.formatCurrency(t.absValue)}</span>
                         </div>
                     </td>
                 </tr>
             `).join('');
         };
 
-        incomeBody.innerHTML = renderRows(incomeList, true);
-        expenseBody.innerHTML = renderRows(expenseList, false);
+        // Injeta o HTML
+        incomeBody.innerHTML = renderRows(incomeList, 'text-emerald-600 dark:text-emerald-400');
+        expenseBody.innerHTML = renderRows(expenseList, 'text-rose-600 dark:text-rose-400');
 
+        // Atualiza os totais nos cabeçalhos
         const totalInc = incomeList.reduce((acc, t) => acc + t.absValue, 0);
         const totalExp = expenseList.reduce((acc, t) => acc + t.absValue, 0);
         
@@ -138,7 +160,7 @@ const Tables = {
         Utils.DOM.updateText('audit-expense-total', Utils.formatCurrency(totalExp));
     },
 
-    // --- RENDERIZA TABELAS DE BANCO (BRUTO) ---
+    // --- LÓGICA DAS TABELAS DE BANCO (Dados Brutos) ---
     renderBankTable(source) {
         const tbody = document.getElementById('bank-table-body');
         if (!tbody) return;
@@ -153,17 +175,18 @@ const Tables = {
             return;
         }
 
+        // Limita a exibição para não travar o navegador
         const displayData = data.slice(0, 150);
 
         tbody.innerHTML = displayData.map(t => {
             let valClass = 'text-gray-800 dark:text-gray-200';
             let displayVal = t.value;
 
-            // Normaliza cor e sinal
+            // Normaliza cores e sinais
             if (source === 'santander-card') {
                 if (t.type === 'expense') {
                     valClass = 'text-rose-600 dark:text-rose-400';
-                    displayVal = -Math.abs(t.value);
+                    displayVal = -Math.abs(t.value); // Mostra negativo visualmente
                 } else {
                     valClass = 'text-emerald-600 dark:text-emerald-400';
                 }
@@ -175,7 +198,7 @@ const Tables = {
             return `
                 <tr class="bg-white border-b hover:bg-gray-50 dark:bg-gray-800 dark:border-gray-700 dark:hover:bg-gray-700 transition-colors">
                     <td class="px-4 py-3 text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">${t.date.toLocaleDateString()}</td>
-                    <td class="px-4 py-3 text-xs font-medium text-gray-700 dark:text-gray-200 truncate max-w-[180px]" title="${t.description}">${t.description}</td>
+                    <td class="px-4 py-3 text-xs font-medium text-gray-700 dark:text-gray-200 truncate max-w-[200px]" title="${t.description}">${t.description}</td>
                     <td class="px-4 py-3 text-xs text-gray-500 dark:text-gray-400">
                         <span class="px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 text-[10px]">${t.category || 'Geral'}</span>
                     </td>
@@ -186,4 +209,5 @@ const Tables = {
     }
 };
 
+// Expõe globalmente
 window.Tables = Tables;
