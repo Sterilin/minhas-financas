@@ -3,7 +3,7 @@ const Compare = {
         DataService.subscribe(() => {
             this.updateSelectors();
         });
-        
+
         document.addEventListener('tabChanged', (e) => {
             if (e.detail.tab === 'compare') {
                 this.updateSelectors();
@@ -11,30 +11,30 @@ const Compare = {
         });
     },
 
-    toggleAutoSync() { 
+    toggleAutoSync() {
         AppState.isAutoSync = !AppState.isAutoSync;
-        if(AppState.isAutoSync) this.handleSliderChange(Utils.DOM.getValue('compare-slider')); 
+        if(AppState.isAutoSync) this.handleSliderChange(Utils.DOM.getValue('compare-slider'));
     },
 
     updateSelectors() {
         const type = Utils.DOM.getValue('compare-type');
         const [yA, yB, pA, pB] = [Utils.DOM.get('comp-year-a'), Utils.DOM.get('comp-year-b'), Utils.DOM.get('comp-period-a'), Utils.DOM.get('comp-period-b')];
-        if(!yA) return; 
-        
+        if(!yA) return;
+
         yA.innerHTML = yB.innerHTML = AppParams.years.map(y => `<option value="${y}">${y}</option>`).join('');
         const periods = type === 'monthly' ? AppParams.months.short : (type === 'quarterly' ? AppParams.quarters.short : []);
         pA.innerHTML = pB.innerHTML = periods.map((l,i) => `<option value="${i}">${l}</option>`).join('');
-        
+
         const latest = DataService.getLatestPeriod();
         yA.value = AppParams.years.includes(latest.year) ? latest.year : AppParams.years[AppParams.years.length-1];
         pA.value = type === 'monthly' ? latest.month : Math.floor(latest.month / 3);
         yB.value = yA.value; pB.value = pA.value;
-        
+
         const sCont = Utils.DOM.get('slider-container');
         const slider = Utils.DOM.get('compare-slider');
-        if(type === 'yearly') { 
+        if(type === 'yearly') {
             sCont.style.display = 'none';
-            pA.style.display='none'; pB.style.display='none'; 
+            pA.style.display='none'; pB.style.display='none';
             this.runComparison('init');
         } else {
             sCont.style.display = 'block';
@@ -53,23 +53,23 @@ const Compare = {
     handleSliderChange(val) {
         const type = Utils.DOM.getValue('compare-type');
         if(type === 'yearly') return;
-        
+
         Utils.DOM.updateText('compare-diff-indicator', `${val} ${type==='monthly'?'Meses':'Trimestres'} de diferença`);
         document.querySelectorAll('#slider-labels span').forEach(s => s.className='');
         const lbl = document.getElementById(`label-${val}`);
         if(lbl) lbl.className = "text-indigo-500 font-bold";
-        
+
         const [yA, pA] = [parseInt(Utils.DOM.getValue('comp-year-a')), parseInt(Utils.DOM.getValue('comp-period-a'))];
         const factor = type === 'monthly' ? 12 : 4;
         const totB = (yA * factor + pA) - parseInt(val);
-        
+
         const yB = Math.floor(totB / factor);
         let pB = totB % factor;
         if(pB < 0) pB += factor;
-        
+
         const selY = Utils.DOM.get('comp-year-b').querySelector(`option[value="${yB}"]`);
         if(selY) { Utils.DOM.get('comp-year-b').value = yB; Utils.DOM.get('comp-period-b').value = pB; }
-        
+
         this.runComparison('slider');
     },
 
@@ -82,7 +82,7 @@ const Compare = {
         const type = Utils.DOM.getValue('compare-type');
         const [yA, pA] = [parseInt(Utils.DOM.getValue('comp-year-a')), parseInt(Utils.DOM.getValue('comp-period-a'))];
         const [yB, pB] = [parseInt(Utils.DOM.getValue('comp-year-b')), parseInt(Utils.DOM.getValue('comp-period-b'))];
-        
+
         if((src === 'A' || src === 'B') && !AppState.isAutoSync && type !== 'yearly') {
             const f = type === 'monthly' ? 12 : 4;
             const diff = Math.abs((yA*f+pA) - (yB*f+pB));
@@ -101,19 +101,19 @@ const Compare = {
             if(!res) return { inc:0, exp:0, bal:0 };
             let i=0, e=0;
             if(type === 'monthly') { i = res.income[p]; e = res.expenses[p]; }
-            else if(type === 'quarterly') { const s = p*3; i = res.income.slice(s,s+3).reduce((a,b)=>a+b,0); e = res.expenses.slice(s,s+3).reduce((a,b)=>a+b,0); } 
+            else if(type === 'quarterly') { const s = p*3; i = res.income.slice(s,s+3).reduce((a,b)=>a+b,0); e = res.expenses.slice(s,s+3).reduce((a,b)=>a+b,0); }
             else { i = res.income.reduce((a,b)=>a+b,0); e = res.expenses.reduce((a,b)=>a+b,0); }
             return { inc: i, exp: e, bal: i - e };
         };
 
         const dA = getData(yA, pA), dB = getData(yB, pB);
         let lA = yA, lB = yB;
-        if(type !== 'yearly') { 
+        if(type !== 'yearly') {
             const arr = type === 'monthly' ? AppParams.months.short : AppParams.quarters.short;
             lA = `${arr[pA]}/${yA.toString().substr(2)}`; lB = `${arr[pB]}/${yB.toString().substr(2)}`;
         }
         ChartManager.renderCompare([lA, lB], dA, dB);
-        
+
         const genBadge = (lbl, vA, vB, invertLogic) => {
             const d = vA - vB;
             const pct = vB === 0 ? (vA === 0 ? 0 : 100) : ((d / vB) * 100).toFixed(1);
@@ -127,7 +127,7 @@ const Compare = {
                     </div>`;
         };
         Utils.DOM.updateHTML('compare-flow-badges', genBadge('Receita', dA.inc, dB.inc, false) + genBadge('Gastos', dA.exp, dB.exp, true) + genBadge('Saldo', dA.bal, dB.bal, false));
-        
+
         const max = Math.max(Math.abs(dA.bal), Math.abs(dB.bal)) || 1;
         const genBar = (v, name, color) => {
             const pct = max===0 ? 0 : Math.round((Math.abs(v)/max)*100);
@@ -143,5 +143,4 @@ const Compare = {
         Utils.DOM.updateHTML('balance-evolution-container', genBar(dA.bal, 'Ref. (A)', '#3b82f6') + genBar(dB.bal, 'Comp. (B)', '#6366f1'));
     }
 };
-
-Compare.init();
+window.Compare = Compare;

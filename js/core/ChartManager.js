@@ -1,9 +1,4 @@
-import { AppState } from './AppState.js';
-import { AppParams } from './Config.js';
-import { Utils } from './Utils.js';
-import { UI } from './UI.js';
-
-export const ChartManager = {
+const ChartManager = {
     resizeTimeout: null, // Optimization 3.1: Debounce timer
 
     getColors() {
@@ -208,3 +203,4 @@ export const ChartManager = {
         });
     }
 };
+window.ChartManager = ChartManager;

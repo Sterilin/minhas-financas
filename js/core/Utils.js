@@ -20,5 +20,4 @@ const Utils = {
         getValue(id) { const el = this.get(id); return el ? el.value : null; }
     }
 };
-// Expor globalmente para manter compatibilidade com módulos
 window.Utils = Utils;

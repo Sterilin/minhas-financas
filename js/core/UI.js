@@ -16,7 +16,7 @@ const UI = {
     togglePrivacy() {
         const body = document.getElementById('app-body');
         if (body) body.classList.toggle('privacy-active');
-        
+
         const btn = document.getElementById('btn-privacy');
         if (btn) {
             const icon = btn.querySelector('i');
@@ -67,14 +67,14 @@ const UI = {
 
         // 5. Dispara evento para carregar gráficos/tabelas
         document.dispatchEvent(new CustomEvent('tabChanged', { detail: { tab: tabName } }));
-        
+
         if(window.AppState) AppState.currentTab = tabName;
     },
 
     updateNavButtons(activeTab) {
         this.validTabs.forEach(btnName => {
             const btn = document.getElementById(`btn-${btnName}`);
-            
+
             // SEGURANÇA: Se o botão não existir no HTML, pula
             if (!btn) return;
 
@@ -92,5 +92,4 @@ const UI = {
         });
     }
 };
-
 window.UI = UI;
