@@ -16,7 +16,19 @@ const AppParams = {
             'Outros': 'bg-gray-400',
             'Salário': 'bg-emerald-600',
             'Freelance': 'bg-blue-400',
-            'Investimento': 'bg-purple-500'
+            'Investimento': 'bg-purple-500',
+            'Mercado': 'bg-teal-500',
+            'Restaurante': 'bg-amber-600',
+            'Festa': 'bg-purple-600',
+            'Bar': 'bg-yellow-500',
+            'Airbnb': 'bg-rose-500',
+            'Lojas': 'bg-pink-500',
+            'Streaming': 'bg-indigo-500',
+            'Sem Parar': 'bg-slate-500',
+            'Farmácia': 'bg-red-500',
+            'Ingresso': 'bg-violet-500',
+            'Serviços': 'bg-cyan-500',
+            'Academia': 'bg-lime-600'
         },
         chart: { lightGrid: '#f3f4f6', darkGrid: '#374151', lightText: '#6b7280', darkText: '#9ca3af' }
     },
