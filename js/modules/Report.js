@@ -1,9 +1,15 @@
-const Report = {
+import { DataService } from '../core/DataService.js';
+import { AppState } from '../core/AppState.js';
+import { AppParams } from '../core/Config.js';
+import { Utils } from '../core/Utils.js';
+import { ChartManager } from '../core/ChartManager.js';
+
+export const Report = {
     init() {
         DataService.subscribe(() => {
             // Define o padrão para os últimos 12 meses ao carregar novos dados
             this.setLast12Months();
-            
+
             this.renderYearToggles();
             this.renderMonthButtons();
             this.updateCharts();
@@ -13,11 +19,11 @@ const Report = {
     // --- Nova Lógica: Janela de 12 Meses ---
     setLast12Months() {
         const latest = DataService.getLatestPeriod(); // { year: 2025, month: 10 }
-        
+
         // Reseta seleções
         AppState.selectedYears = [];
         AppState.reportSelections = {};
-        
+
         // Loop para pegar os últimos 12 meses (0 a 11)
         for (let i = 0; i < 12; i++) {
             let y = latest.year;
@@ -63,26 +69,26 @@ const Report = {
         c.innerHTML = '';
         const allYears = AppParams.years;
         const isAllSelected = allYears.length > 0 && AppState.selectedYears.length === allYears.length;
-        
+
         const createBtn = (text, onClick, isActive, title) => {
             const btn = document.createElement('button');
             btn.className = `px-3 py-1.5 text-[10px] sm:text-xs rounded-full transition-all border font-medium ${isActive ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm' : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-100 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-600'}`;
-            btn.textContent = text; 
-            btn.onclick = onClick; 
+            btn.textContent = text;
+            btn.onclick = onClick;
             if(title) btn.title = title;
             return btn;
         };
 
         // Botão para resetar para 12 meses
-        c.appendChild(createBtn('12 Meses', () => { 
-            this.setLast12Months(); 
-            this.renderYearToggles(); 
-            this.renderMonthButtons(); 
-            this.updateCharts(); 
+        c.appendChild(createBtn('12 Meses', () => {
+            this.setLast12Months();
+            this.renderYearToggles();
+            this.renderMonthButtons();
+            this.updateCharts();
         }, false, "Visualizar últimos 12 meses"));
 
         c.appendChild(createBtn('Todos', () => this.toggleAllYears(), isAllSelected));
-        
+
         AppParams.years.forEach(y => c.appendChild(createBtn(y, () => this.toggleReportYear(y), AppState.selectedYears.includes(y))));
     },
 
@@ -95,22 +101,22 @@ const Report = {
         const allInd = labels.map((_,i)=>i);
 
         AppState.selectedYears.forEach(y => {
-            const div = document.createElement('div'); 
+            const div = document.createElement('div');
             div.className = 'flex flex-col gap-1 pb-2 border-b border-gray-100 dark:border-gray-700 last:border-0 last:pb-0';
-            
+
             // Exibe o ano sempre que houver mais de um ano selecionado OU para clareza na visualização de 12 meses
             div.innerHTML = `<span class="text-[10px] font-bold text-gray-400 uppercase">${y}</span>`;
-            
+
             const grp = document.createElement('div'); grp.className = 'flex flex-wrap gap-2';
             const sel = AppState.reportSelections[y] || [];
-            
-            const bAll = document.createElement('button'); bAll.textContent = 'Todos'; 
+
+            const bAll = document.createElement('button'); bAll.textContent = 'Todos';
             bAll.onclick = () => this.toggleAllMonths(y, allInd);
             bAll.className = `px-3 py-1.5 text-[10px] sm:text-xs rounded-full transition-all font-medium ${sel.length === allInd.length ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-300'}`;
             grp.appendChild(bAll);
-            
+
             labels.forEach((l, i) => {
-                const b = document.createElement('button'); b.textContent = l; 
+                const b = document.createElement('button'); b.textContent = l;
                 b.onclick = () => this.toggleMonth(y, i);
                 const act = sel.includes(i);
                 b.className = `px-3 py-1.5 text-[10px] sm:text-xs rounded-full transition-all ${act ? 'bg-blue-100 text-blue-700 border border-blue-200 font-bold dark:bg-blue-900/40 dark:text-blue-300 dark:border-blue-800 shadow-sm' : 'bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-500 dark:hover:bg-gray-700'}`;
@@ -125,7 +131,7 @@ const Report = {
         const viewType = Utils.DOM.getValue('filter-view');
         const sourceFilter = Utils.DOM.getValue('filter-source');
         const isMonthly = viewType === 'monthly';
-        
+
         const data = { labels: [], years: [], inc: [], exp: [], bal: [] };
         const projectionData = { labels: [], years: [], bal: [] };
 
@@ -135,23 +141,23 @@ const Report = {
         AppState.selectedYears.forEach(y => {
             const indices = AppState.reportSelections[y] || [];
             if (indices.length > 0 && indices.length < fullCount) isCustom = true;
-            
+
             const res = DataService.getAggregated(y, isMonthly, indices, sourceFilter);
-            
+
             res.labels.forEach((l, i) => {
                 // Filtro visual de zeros
                 if (res.income[i] === 0 && res.expenses[i] === 0 && res.balances[i] === 0) return;
-                
-                data.labels.push(l); data.years.push(y); 
-                data.inc.push(res.income[i]); 
-                data.exp.push(res.expenses[i]); 
+
+                data.labels.push(l); data.years.push(y);
+                data.inc.push(res.income[i]);
+                data.exp.push(res.expenses[i]);
                 // Fluxo de Caixa: Mostra apenas Santander
-                data.bal.push(res.balancesSantander[i]); 
+                data.bal.push(res.balancesSantander[i]);
 
                 // Projeção: Usa saldo Conjunto
                 projectionData.labels.push(l);
                 projectionData.years.push(y);
-                projectionData.bal.push(res.balances[i]); 
+                projectionData.bal.push(res.balances[i]);
             });
         });
 
@@ -169,7 +175,7 @@ const Report = {
         if (data.labels.length === 0) statusText = "Nenhum dado com valor no período selecionado";
         else if (isCustom) statusText = "Exibindo combinação personalizada (Filtro Ativo)";
         else statusText = `Visualizando ${data.labels.length} ${isMonthly ? 'meses' : 'trimestres'}`;
-        
+
         if(sourceFilter !== 'all') {
             statusText += ` (${sourceFilter === 'account' ? 'Somente Conta' : 'Somente Fatura'})`;
         }
@@ -177,7 +183,7 @@ const Report = {
         Utils.DOM.updateText('chart-status-text', statusText);
 
         ChartManager.renderReport(data);
-        
+
         const tInc = data.inc.reduce((a,b)=>a+b,0);
         const tExp = data.exp.reduce((a,b)=>a+b,0);
         const finalBalance = data.bal.length > 0 ? data.bal[data.bal.length - 1] : 0;
@@ -195,22 +201,22 @@ const Report = {
         const sliderVal = parseInt(Utils.DOM.getValue('projection-slider')) || 6;
         const viewType = Utils.DOM.getValue('filter-view');
         const lastVisibleVal = histData.bal.length > 0 ? histData.bal[histData.bal.length - 1] : 0;
-        
+
         let trend = 0;
         if(histData.bal.length >= 2) {
             trend = (lastVisibleVal - histData.bal[0]) / (histData.bal.length - 1);
         }
         const stdDev = Math.max(Math.abs(lastVisibleVal) * 0.1, 100);
-        
-        let pData = { 
-            labels: [...histData.labels], 
-            years: [...histData.years], 
-            hist: [...histData.bal], 
-            proj: Array(histData.bal.length).fill(null), 
-            up: Array(histData.bal.length).fill(null), 
-            low: Array(histData.bal.length).fill(null) 
+
+        let pData = {
+            labels: [...histData.labels],
+            years: [...histData.years],
+            hist: [...histData.bal],
+            proj: Array(histData.bal.length).fill(null),
+            up: Array(histData.bal.length).fill(null),
+            low: Array(histData.bal.length).fill(null)
         };
-        
+
         if(pData.hist.length > 0) {
             const idx = pData.hist.length - 1;
             pData.proj[idx] = pData.up[idx] = pData.low[idx] = lastVisibleVal;
@@ -234,8 +240,8 @@ const Report = {
             pData.years.push(currentYear);
             curVal += (trend * 0.8);
             const int = 1.96 * stdDev * Math.sqrt(i * 0.5);
-            
-            pData.hist.push(null); pData.proj.push(curVal); 
+
+            pData.hist.push(null); pData.proj.push(curVal);
             pData.up.push(curVal + int);
             pData.low.push(curVal - int);
         }
@@ -258,7 +264,7 @@ const Report = {
                 </div>
                 <div class="text-[9px] text-gray-400 mt-1">vs Saldo Conjunto Atual</div>
             </div>`;
-        Utils.DOM.updateHTML('projection-analysis', 
+        Utils.DOM.updateHTML('projection-analysis',
             formatCard('Cenário Base', finalProj, calcPct(finalProj, startVal)) +
             formatCard('Cenário Otimista', finalUp, calcPct(finalUp, startVal)) +
             formatCard('Cenário Conservador', finalLow, calcPct(finalLow, startVal))
@@ -291,14 +297,14 @@ const Report = {
     },
     handleViewChange() {
         const viewType = Utils.DOM.getValue('filter-view');
-        // Se trocar para mensal, podemos querer voltar para 12 meses? 
+        // Se trocar para mensal, podemos querer voltar para 12 meses?
         // Por padrão, seleciona tudo, mas o usuário pode clicar no botão "12 Meses" se quiser.
         const allIndices = viewType === 'monthly' ? Array.from({length:12},(_,i)=>i) : [0,1,2,3];
         AppParams.years.forEach(y => AppState.reportSelections[y] = [...allIndices]);
 
         const slider = Utils.DOM.get('projection-slider');
         const [lMin, lMax, lVal] = [Utils.DOM.get('proj-slider-label-min'), Utils.DOM.get('proj-slider-label-max'), Utils.DOM.get('proj-slider-label-val')];
-        
+
         if (viewType === 'monthly') {
             slider.max = 6; slider.value = 6; lMin.innerText = '1 Mês'; lMax.innerText = '6 Meses'; lVal.innerText = '6 Meses';
         } else {
@@ -312,5 +318,3 @@ const Report = {
         this.updateCharts();
     }
 };
-
-Report.init();

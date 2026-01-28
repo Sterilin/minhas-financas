@@ -1,4 +1,7 @@
-const UI = {
+import { AppParams } from './Config.js';
+import { AppState } from './AppState.js';
+
+export const UI = {
     // Define as abas esperadas pelo sistema
     validTabs: ['dashboard', 'report', 'compare', 'goals', 'data'],
 
@@ -16,7 +19,7 @@ const UI = {
     togglePrivacy() {
         const body = document.getElementById('app-body');
         if (body) body.classList.toggle('privacy-active');
-        
+
         const btn = document.getElementById('btn-privacy');
         if (btn) {
             const icon = btn.querySelector('i');
@@ -33,7 +36,7 @@ const UI = {
     // --- FUNÇÃO QUE FALTAVA ---
     getCategoryColor(category) {
         // Verifica se a categoria e os parâmetros existem para evitar erros
-        if (!category || !window.AppParams || !AppParams.colors || !AppParams.colors.categories) {
+        if (!category || !AppParams || !AppParams.colors || !AppParams.colors.categories) {
             return 'bg-gray-400'; // Cor padrão caso não encontre
         }
         return AppParams.colors.categories[category] || 'bg-gray-400';
@@ -67,14 +70,14 @@ const UI = {
 
         // 5. Dispara evento para carregar gráficos/tabelas
         document.dispatchEvent(new CustomEvent('tabChanged', { detail: { tab: tabName } }));
-        
-        if(window.AppState) AppState.currentTab = tabName;
+
+        if(AppState) AppState.currentTab = tabName;
     },
 
     updateNavButtons(activeTab) {
         this.validTabs.forEach(btnName => {
             const btn = document.getElementById(`btn-${btnName}`);
-            
+
             // SEGURANÇA: Se o botão não existir no HTML, pula
             if (!btn) return;
 
@@ -92,5 +95,3 @@ const UI = {
         });
     }
 };
-
-window.UI = UI;

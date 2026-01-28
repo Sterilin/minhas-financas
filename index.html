@@ -255,7 +255,7 @@
             <!-- Cabeçalho da Aba Dados -->
             <div class="flex flex-col sm:flex-row justify-between items-center mb-6 gap-4">
                 <h2 class="text-xl font-bold text-gray-800 dark:text-white">Dados & Auditoria</h2>
-        
+
                 <!-- Menu de Sub-abas -->
                 <div class="flex bg-gray-100 dark:bg-gray-700 p-1 rounded-lg overflow-x-auto max-w-full">
                     <button onclick="Tables.switchSubTab('audit')" id="tab-btn-audit" class="px-3 py-1.5 text-xs font-medium rounded-md transition-all shadow-sm bg-white text-gray-800 dark:bg-gray-600 dark:text-white whitespace-nowrap">
@@ -272,7 +272,7 @@
                     </button>
                 </div>
             </div>
-        
+
             <!-- 1. SUB-VISÃO: AUDITORIA -->
             <div id="subview-audit" class="subview-container fade-in">
                 <div class="bg-blue-50 border-l-4 border-blue-500 p-4 mb-6 rounded-r-lg dark:bg-blue-900/20 dark:border-blue-700">
@@ -280,7 +280,7 @@
                         <strong>Raio-X do Mês:</strong> Estas são as transações exatas somadas para compor o seu Resumo Financeiro atual. Itens ignorados não aparecem aqui.
                     </p>
                 </div>
-        
+
                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
                     <!-- Tabela Receitas -->
                     <div class="bg-white rounded-xl shadow-sm border border-gray-100 dark:bg-gray-800 dark:border-gray-700 overflow-hidden flex flex-col h-[500px]">
@@ -294,7 +294,7 @@
                             </table>
                         </div>
                     </div>
-        
+
                     <!-- Tabela Despesas -->
                     <div class="bg-white rounded-xl shadow-sm border border-gray-100 dark:bg-gray-800 dark:border-gray-700 overflow-hidden flex flex-col h-[500px]">
                         <div class="bg-rose-50 dark:bg-rose-900/30 px-4 py-3 border-b border-rose-100 dark:border-rose-800 flex justify-between items-center shrink-0">
@@ -309,7 +309,7 @@
                     </div>
                 </div>
             </div>
-        
+
             <!-- 2. SUB-VISÃO: TABELAS DE BANCO -->
             <div id="subview-bank" class="subview-container hidden fade-in">
                 <div class="bg-white rounded-xl shadow-sm border border-gray-100 dark:bg-gray-800 dark:border-gray-700 overflow-hidden">
@@ -335,20 +335,6 @@
         </div>
     </main>
 
-    <script src="js/core/Config.js"></script>
-    <script src="js/core/Utils.js"></script>
-    <script src="js/core/AppState.js"></script>
-    <script src="js/core/DataService.js"></script>
-    <script src="js/core/ChartManager.js"></script>
-    <script src="js/core/UI.js"></script>
-
-    <script src="js/modules/Dashboard.js"></script>
-    <script src="js/modules/Report.js"></script>
-    <script src="js/modules/Compare.js"></script>
-    <script src="js/modules/Goals.js"></script>
-    <script src="js/modules/Tables.js"></script>
-
-    <script src="js/main.js"></script>
+    <script type="module" src="js/main.js"></script>
 </body>
 </html>
-

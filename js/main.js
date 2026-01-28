@@ -1,6 +1,32 @@
+import { AppParams } from './core/Config.js';
+import { Utils } from './core/Utils.js';
+import { AppState } from './core/AppState.js';
+import { DataService } from './core/DataService.js';
+import { ChartManager } from './core/ChartManager.js';
+import { UI } from './core/UI.js';
+import { Dashboard } from './modules/Dashboard.js';
+import { Report } from './modules/Report.js';
+import { Compare } from './modules/Compare.js';
+import { Goals } from './modules/Goals.js';
+import { Tables } from './modules/Tables.js';
+
 document.addEventListener('DOMContentLoaded', () => {
+    // Expose globals for HTML event handlers
+    window.AppParams = AppParams;
+    window.Utils = Utils;
+    window.AppState = AppState;
+    window.UI = UI;
+    window.DataService = DataService;
+    window.ChartManager = ChartManager;
+
+    window.Dashboard = Dashboard;
+    window.Report = Report;
+    window.Compare = Compare;
+    window.Goals = Goals;
+    window.Tables = Tables;
+
     // 1. Atualiza a data no cabeçalho
-    if (window.Utils && Utils.DOM) {
+    if (Utils && Utils.DOM) {
         Utils.DOM.updateText('current-date', new Date().toLocaleDateString('pt-BR'));
     }
 
@@ -12,34 +38,42 @@ document.addEventListener('DOMContentLoaded', () => {
         switchTab: (t) => UI.switchTab(t),
 
         // Relatórios (Report.js)
-        handleViewChange: () => window.Report && Report.handleViewChange(),
-        handleProjectionSliderChange: (v) => window.Report && Report.handleProjectionSliderChange(v),
-        toggleAllYears: () => window.Report && Report.toggleAllYears(),
-        toggleReportYear: (y) => window.Report && Report.toggleReportYear(y),
-        toggleMonth: (y, i) => window.Report && Report.toggleMonth(y, i),
-        toggleAllMonths: (y, all) => window.Report && Report.toggleAllMonths(y, all),
+        handleViewChange: () => Report.handleViewChange(),
+        handleProjectionSliderChange: (v) => Report.handleProjectionSliderChange(v),
+        toggleAllYears: () => Report.toggleAllYears(),
+        toggleReportYear: (y) => Report.toggleReportYear(y),
+        toggleMonth: (y, i) => Report.toggleMonth(y, i),
+        toggleAllMonths: (y, all) => Report.toggleAllMonths(y, all),
 
         // Comparativo (Compare.js)
-        toggleAutoSync: () => window.Compare && Compare.toggleAutoSync(),
-        updateCompareSelectors: () => window.Compare && Compare.updateSelectors(),
-        handleSliderChange: (v) => window.Compare && Compare.handleSliderChange(v),
-        onSelectionChange: (src) => window.Compare && Compare.onSelectionChange(src),
-        runComparison: (src) => window.Compare && Compare.runComparison(src),
-        initInflationSelector: () => window.Compare && Compare.initInflationSelector(),
-        updateInflationChart: () => window.Compare && Compare.updateInflationChart()
+        toggleAutoSync: () => Compare.toggleAutoSync(),
+        updateCompareSelectors: () => Compare.updateSelectors(),
+        handleSliderChange: (v) => Compare.handleSliderChange(v),
+        onSelectionChange: (src) => Compare.onSelectionChange(src),
+        runComparison: (src) => Compare.runComparison(src),
+
+        // Goals
+        openCalculator: () => Goals.openCalculator(),
+        closeCalculator: () => Goals.closeCalculator(),
+        calculateTotal: () => Goals.calculateTotal(),
+        togglePlanMode: (m) => Goals.togglePlanMode(m),
+        calculatePlan: () => Goals.calculatePlan(),
+        copyTotal: () => Goals.copyTotal(),
+
+        // Data/Tables
+        switchSubTab: (t) => Tables.switchSubTab(t)
     };
 
-    // 3. Inicializa os Módulos Específicos (se existirem)
-    if (window.Tables && typeof Tables.init === 'function') {
-        Tables.init();
-    }
-    
+    // 3. Inicializa os Módulos Específicos
+    Dashboard.init();
+    Report.init();
+    Compare.init();
+    Goals.init();
+    Tables.init();
+
     // 4. Inicia o Carregamento de Dados
-    if (window.DataService) {
-        DataService.init();
-    }
+    DataService.init();
 
     // 5. Define a aba inicial (Dashboard)
-    // O novo UI.js protege contra erro se 'dashboard' não existir
     UI.switchTab('dashboard');
 });

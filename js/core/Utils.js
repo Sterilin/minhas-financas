@@ -1,4 +1,4 @@
-const Utils = {
+export const Utils = {
     formatCurrency: (v) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v),
     parseMoney: (str) => {
         if (!str) return 0;
@@ -20,5 +20,3 @@ const Utils = {
         getValue(id) { const el = this.get(id); return el ? el.value : null; }
     }
 };
-// Expor globalmente para manter compatibilidade com módulos
-window.Utils = Utils;

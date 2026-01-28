@@ -1,9 +1,13 @@
-const Tables = {
+import { DataService } from '../core/DataService.js';
+import { AppParams } from '../core/Config.js';
+import { Utils } from '../core/Utils.js';
+
+export const Tables = {
     currentSubTab: 'audit', // Aba padrão
 
     init() {
         // Tenta renderizar assim que inicia
-        if (window.DataService) {
+        if (DataService) {
             DataService.subscribe(() => this.render());
         }
 
@@ -13,7 +17,7 @@ const Tables = {
                 // Remove hidden explicitamente antes de renderizar para garantir
                 const container = document.getElementById('view-data');
                 if (container) container.classList.remove('hidden');
-                
+
                 this.render();
             }
         });
@@ -21,7 +25,7 @@ const Tables = {
 
     switchSubTab(tabName) {
         this.currentSubTab = tabName;
-        
+
         // 1. Atualiza visual dos botões
         const buttons = ['audit', 'bradesco', 'santander-acc', 'santander-card'];
         buttons.forEach(btn => {
@@ -66,7 +70,7 @@ const Tables = {
     renderAudit() {
         const incomeBody = document.getElementById('audit-income-body');
         const expenseBody = document.getElementById('audit-expense-body');
-        
+
         if (!incomeBody || !expenseBody) return;
 
         // Limpa antes de preencher
@@ -89,10 +93,10 @@ const Tables = {
             let y = t.date.getFullYear();
             // Regra do dia 16
             if (t.date.getDate() >= 16) { m++; if (m > 11) { m = 0; y++; } }
-            
+
             const isTargetMonth = (m === month && y === year);
             const isIgnored = AppParams.ignorePatterns.some(p => t.description.toLowerCase().includes(p));
-            
+
             return isTargetMonth && !isIgnored;
         });
 
@@ -122,7 +126,7 @@ const Tables = {
 
         const renderRows = (list, colorClass) => {
             if (list.length === 0) return '<tr><td class="p-4 text-xs text-gray-400 text-center">Nenhum registro considerado neste período.</td></tr>';
-            
+
             return list.map(t => `
                 <tr class="border-b border-gray-50 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
                     <td class="px-4 py-2">
@@ -143,7 +147,7 @@ const Tables = {
 
         const totalInc = incomeList.reduce((acc, t) => acc + t.absValue, 0);
         const totalExp = expenseList.reduce((acc, t) => acc + t.absValue, 0);
-        
+
         Utils.DOM.updateText('audit-income-total', Utils.formatCurrency(totalInc));
         Utils.DOM.updateText('audit-expense-total', Utils.formatCurrency(totalExp));
     },
@@ -194,5 +198,3 @@ const Tables = {
         }).join('');
     }
 };
-
-window.Tables = Tables;
