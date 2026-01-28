@@ -1,10 +1,14 @@
-const DataService = {
-    bradescoTransactions: [], 
-    santanderAccountTransactions: [], 
+import { Utils } from './Utils.js';
+import { AppParams } from './Config.js';
+import { AppState } from './AppState.js';
+
+export const DataService = {
+    bradescoTransactions: [],
+    santanderAccountTransactions: [],
     santanderCardTransactions: [],
     goalsList: [],
     monthlyDataCache: {},
-    
+
     listeners: [],
     subscribe(fn) { this.listeners.push(fn); },
     notify() { this.listeners.forEach(fn => fn(this)); },
@@ -15,23 +19,40 @@ const DataService = {
 
         if (!AppParams || !AppParams.urls) return false;
 
+        // Initialize Web Worker
+        this.worker = new Worker('js/workers/parser.worker.js');
+        this.worker.onmessage = (e) => this.handleWorkerMessage(e);
+
+        // Check Cache first (Optimization 1.2)
+        if (this.loadFromCache()) {
+            console.log("📦 Loaded from Cache");
+            this.buildCache();
+            this.notify();
+            // Background update
+            this.fetchAndParse();
+            return true;
+        } else {
+            return this.fetchAndParse();
+        }
+    },
+
+    async fetchAndParse() {
         try {
             const getUrl = (url) => url ? `${url}&t=${Date.now()}` : null;
-            
+
             const results = await Promise.allSettled([
-                this.fetchData(getUrl(AppParams.urls.bradesco), 'Bradesco'),
-                this.fetchData(getUrl(AppParams.urls.santanderAccount), 'Conta Santander'),
-                this.fetchData(getUrl(AppParams.urls.santanderCard), 'Cartão Santander'),
-                this.fetchData(getUrl(AppParams.urls.goals), 'Metas')
+                this.fetchData(getUrl(AppParams.urls.bradesco)),
+                this.fetchData(getUrl(AppParams.urls.santanderAccount)),
+                this.fetchData(getUrl(AppParams.urls.santanderCard)),
+                this.fetchData(getUrl(AppParams.urls.goals))
             ]);
 
-            if (results[0].status === 'fulfilled') this.parseBradescoTSV(results[0].value);
-            if (results[1].status === 'fulfilled') this.parseSantanderAccountTSV(results[1].value);
-            if (results[2].status === 'fulfilled') this.parseSantanderCardTSV(results[2].value);
-            if (results[3].status === 'fulfilled') this.parseGoalsTSV(results[3].value);
+            // Offload parsing to worker (Optimization 1.3)
+            if (results[0].status === 'fulfilled') this.worker.postMessage({ type: 'PARSE_STATEMENT', payload: { text: results[0].value, sourceLabel: 'bradesco', ignorePatterns: AppParams.ignorePatterns } });
+            if (results[1].status === 'fulfilled') this.worker.postMessage({ type: 'PARSE_STATEMENT', payload: { text: results[1].value, sourceLabel: 'santander_acc', ignorePatterns: AppParams.ignorePatterns } });
+            if (results[2].status === 'fulfilled') this.worker.postMessage({ type: 'PARSE_CARD', payload: { text: results[2].value, ignorePatterns: AppParams.ignorePatterns } });
+            if (results[3].status === 'fulfilled') this.worker.postMessage({ type: 'PARSE_GOALS', payload: { text: results[3].value, months: AppParams.months.short } });
 
-            this.buildCache();
-            this.notify(); 
             return true;
 
         } catch (error) {
@@ -40,7 +61,71 @@ const DataService = {
         }
     },
 
-    async fetchData(url, label) {
+    handleWorkerMessage(e) {
+        const { type, payload } = e.data;
+        if (type === 'PARSE_COMPLETE') {
+            // Rehydrate Dates
+            const hydrate = (list) => list.map(t => ({ ...t, date: new Date(t.dateStr) }));
+
+            if (payload.sourceLabel === 'bradesco') {
+                this.bradescoTransactions = hydrate(payload.data);
+                this.updateYearsFromData(this.bradescoTransactions);
+            } else if (payload.sourceLabel === 'santander_acc') {
+                this.santanderAccountTransactions = hydrate(payload.data);
+                this.updateYearsFromData(this.santanderAccountTransactions);
+            } else if (payload.sourceLabel === 'santander_card') {
+                this.santanderCardTransactions = hydrate(payload.data);
+                this.updateYearsFromData(this.santanderCardTransactions);
+            } else if (payload.sourceLabel === 'goals') {
+                this.goalsList = payload.data;
+            }
+
+            this.saveToCache(); // Save parsed data to LocalStorage
+            this.buildCache();
+            this.notify();
+        }
+    },
+
+    // --- CACHING LOGIC ---
+    saveToCache() {
+        const data = {
+            timestamp: Date.now(),
+            bradesco: this.bradescoTransactions,
+            santanderAcc: this.santanderAccountTransactions,
+            santanderCard: this.santanderCardTransactions,
+            goals: this.goalsList
+        };
+        localStorage.setItem('finance_cache', JSON.stringify(data));
+    },
+
+    loadFromCache() {
+        const cached = localStorage.getItem('finance_cache');
+        if (!cached) return false;
+        try {
+            const data = JSON.parse(cached);
+            const TTL = 10 * 60 * 1000; // 10 Minutes
+            if (Date.now() - data.timestamp > TTL) return false;
+
+            // Rehydrate Dates from strings
+            const hydrate = (list) => list ? list.map(t => ({ ...t, date: new Date(t.dateStr || t.date) })) : [];
+
+            this.bradescoTransactions = hydrate(data.bradesco);
+            this.santanderAccountTransactions = hydrate(data.santanderAcc);
+            this.santanderCardTransactions = hydrate(data.santanderCard);
+            this.goalsList = data.goals || [];
+
+            this.updateYearsFromData(this.bradescoTransactions);
+            this.updateYearsFromData(this.santanderAccountTransactions);
+            this.updateYearsFromData(this.santanderCardTransactions);
+
+            return true;
+        } catch (e) {
+            console.error("Cache load failed", e);
+            return false;
+        }
+    },
+
+    async fetchData(url) {
         if(!url) return "";
         try {
             const res = await fetch(url);
@@ -54,114 +139,6 @@ const DataService = {
                 return await resP.text();
             } catch (finalError) { return ""; }
         }
-    },
-
-    // --- PARSERS (MANTIDOS) ---
-    parseBankStatement(text, sourceLabel) {
-        if (!text || typeof text !== 'string') return [];
-        const rows = text.split('\n').map(r => r.trim()).filter(r => r);
-        if (rows.length < 2) return [];
-        const headers = rows[0].toLowerCase().split('\t');
-        const idx = {
-            date: headers.findIndex(h => h.includes('data')),
-            val: headers.findIndex(h => h.includes('valor')),
-            bal: headers.findIndex(h => h.includes('saldo')),
-            desc: headers.findIndex(h => h.includes('desc') || h.includes('hist') || h.includes('lanc'))
-        };
-        return rows.slice(1).map(row => {
-            const cols = row.split('\t');
-            if(cols.length < 3) return null;
-            let date = new Date();
-            const dStr = cols[idx.date];
-            if(dStr && dStr.match(/^\d{2}\/\d{2}\/\d{2,4}/)) {
-                const [d, m, y] = dStr.split('/');
-                date = new Date(y.length===2 ? '20'+y : y, m-1, d);
-            }
-            const val = idx.val > -1 ? Utils.parseMoney(cols[idx.val]) : 0;
-            const bal = idx.bal > -1 ? Utils.parseMoney(cols[idx.bal]) : 0;
-            const desc = (idx.desc > -1 ? cols[idx.desc] : '').replace(/"/g, '');
-            let cat = 'Outros';
-            if(val > 0) cat = 'Receita';
-            else if(desc.toLowerCase().includes('pix')) cat = 'Pix';
-            return {
-                date, description: desc, value: val, balance: bal,
-                category: cat, source: sourceLabel, type: val >= 0 ? 'income' : 'expense'
-            };
-        }).filter(t => t).sort((a,b) => b.date - a.date);
-    },
-    parseBradescoTSV(text) { this.bradescoTransactions = this.parseBankStatement(text, 'bradesco'); this.updateYearsFromData(this.bradescoTransactions); },
-    parseSantanderAccountTSV(text) { this.santanderAccountTransactions = this.parseBankStatement(text, 'santander_acc'); this.updateYearsFromData(this.santanderAccountTransactions); },
-    parseSantanderCardTSV(text) {
-        if (!text || typeof text !== 'string') return;
-        const rows = text.split('\n').map(r => r.trim()).filter(r => r);
-        if (rows.length < 2) return;
-        const headers = rows[0].toLowerCase().split('\t');
-        const idx = {
-            date: headers.findIndex(h => h.includes('data')),
-            val: headers.findIndex(h => h.includes('valor')),
-            cat: headers.findIndex(h => h.includes('categ') || h.includes('ramo')),
-            desc: headers.findIndex(h => h.includes('desc'))
-        };
-        this.santanderCardTransactions = rows.slice(1).map(row => {
-            const cols = row.split('\t');
-            let date = new Date();
-             if (idx.date > -1 && cols[idx.date]) {
-                const dStr = cols[idx.date];
-                if(dStr.match(/^\d{2}\/\d{2}\/\d{4}/)) {
-                    const [d, m, y] = dStr.split('/');
-                    date = new Date(y, m-1, d);
-                }
-            }
-            const val = idx.val > -1 ? Utils.parseMoney(cols[idx.val]) : 0;
-            const desc = idx.desc > -1 ? cols[idx.desc].replace(/"/g, '') : 'Santander';
-            return {
-                date, description: desc, value: val,
-                category: idx.cat > -1 ? cols[idx.cat] : 'Cartão', source: 'santander_card',
-                type: val > 0 ? 'expense' : 'income' 
-            };
-        }).filter(t => t && t.value !== 0).sort((a,b) => b.date - a.date);
-        this.updateYearsFromData(this.santanderCardTransactions);
-    },
-    parseGoalsTSV(text) {
-        if (!text || typeof text !== 'string') return;
-        const rows = text.split('\n').map(r => r.trim()).filter(r => r);
-        if (rows.length < 2) return;
-        const headers = rows[0].toLowerCase().split('\t');
-        const idx = {
-            title: headers.findIndex(h => h.includes('título') || h.includes('titulo') || h.includes('nome')),
-            total: headers.findIndex(h => h.includes('total') || h.includes('alvo')),
-            current: headers.findIndex(h => h.includes('atual') || h.includes('acumulado')),
-            param: headers.findIndex(h => h.includes('aporte') || h.includes('mensal') || h.includes('meta')),
-            image: headers.findIndex(h => h.includes('imagem') || h.includes('img'))
-        };
-        this.goalsList = rows.slice(1).map(row => {
-            const cols = row.split('\t');
-            const getVal = (i) => (i > -1 && cols[i]) ? cols[i] : '';
-            const total = Utils.parseMoney(getVal(idx.total));
-            const current = Utils.parseMoney(getVal(idx.current));
-            const paramStr = getVal(idx.param);
-            let monthlyContribution = 0; let monthsLeft = 0;
-            const remainingValue = Math.max(0, total - current);
-            const dateMatch = paramStr.match(/(\d{1,2})[\/\-](\d{2,4})/) || paramStr.match(/([a-zA-Z]{3})[\/\-](\d{2,4})/);
-            if (dateMatch) {
-                const now = new Date(); let m = 0, y = 0;
-                if(paramStr.includes('/')) {
-                    const parts = paramStr.split('/');
-                    if(parts.length === 2) { y = parseInt(parts[1]); y = y < 100 ? 2000 + y : y; const mStr = parts[0].toLowerCase(); m = AppParams.months.short.findIndex(x => x.toLowerCase() === mStr); if(m === -1 && !isNaN(parts[0])) m = parseInt(parts[0]) - 1; } 
-                    else if (parts.length === 3) { y = parseInt(parts[2]); m = parseInt(parts[1]) - 1; }
-                }
-                if (y > 0) {
-                    const targetDate = new Date(y, m, 1);
-                    monthsLeft = (targetDate.getFullYear() - now.getFullYear()) * 12 + (targetDate.getMonth() - now.getMonth());
-                    monthsLeft = Math.max(1, monthsLeft);
-                    monthlyContribution = remainingValue / monthsLeft;
-                }
-            } else {
-                monthlyContribution = Utils.parseMoney(paramStr);
-                if (monthlyContribution > 0) monthsLeft = Math.ceil(remainingValue / monthlyContribution);
-            }
-            return { title: idx.title > -1 ? getVal(idx.title) : 'Meta', total, current, monthly: monthlyContribution, monthsLeft, image: idx.image > -1 ? getVal(idx.image) : '', percent: total > 0 ? (current / total) * 100 : 0 };
-        }).filter(g => g.total > 0);
     },
 
     updateYearsFromData(list) {
@@ -179,8 +156,8 @@ const DataService = {
     buildCache() {
         this.monthlyDataCache = {};
         AppParams.years.forEach(y => {
-            this.monthlyDataCache[y] = { 
-                income: new Array(12).fill(0), expenses: new Array(12).fill(0), 
+            this.monthlyDataCache[y] = {
+                income: new Array(12).fill(0), expenses: new Array(12).fill(0),
                 balances: new Array(12).fill(0), balancesSantander: new Array(12).fill(0),
                 acc: { income: new Array(12).fill(0), expenses: new Array(12).fill(0) },
                 card: { income: new Array(12).fill(0), expenses: new Array(12).fill(0) }
@@ -261,8 +238,8 @@ const DataService = {
         const sum = (arr) => arr.reduce((a, b) => a + b, 0);
         if (isMonthly) {
             indices.forEach(i => {
-                income.push(srcInc[i]); expenses.push(srcExp[i]); 
-                balances.push(d.balances[i]); balancesSantander.push(d.balancesSantander[i]); 
+                income.push(srcInc[i]); expenses.push(srcExp[i]);
+                balances.push(d.balances[i]); balancesSantander.push(d.balancesSantander[i]);
                 labels.push(AppParams.months.short[i]);
             });
         } else {
@@ -289,18 +266,18 @@ const DataService = {
         if(this.santanderCardTransactions) this.santanderCardTransactions.forEach(t => cats.add(t.category));
         return Array.from(cats).sort();
     },
-    
+
     // --- AUDITORIA DE RECEITA ---
     auditRevenue(year, month) {
         console.group(`🔎 AUDITORIA DE RECEITA (${AppParams.months.full[month]}/${year})`);
-        
+
         const allTrans = [...this.bradescoTransactions, ...this.santanderAccountTransactions];
         const incomeItems = [];
-        
+
         allTrans.forEach(t => {
             let m = t.date.getMonth(); let y = t.date.getFullYear();
             if (t.date.getDate() >= 16) { m++; if (m > 11) { m = 0; y++; } }
-            
+
             if (m === month && y === year) {
                 if (t.value > 0 && !AppParams.ignorePatterns.some(p => t.description.toLowerCase().includes(p))) {
                     incomeItems.push(t);
@@ -322,29 +299,29 @@ const DataService = {
     // --- NOVA AUDITORIA DE DESPESAS ---
     auditExpenses(year, month) {
         console.group(`🔎 AUDITORIA DE DESPESAS (TOP 10) - (${AppParams.months.full[month]}/${year})`);
-        
+
         const allTrans = [
-            ...this.bradescoTransactions, 
+            ...this.bradescoTransactions,
             ...this.santanderAccountTransactions,
             ...this.santanderCardTransactions
         ];
-        
+
         const expenseItems = [];
-        
+
         allTrans.forEach(t => {
             let m = t.date.getMonth();
             let y = t.date.getFullYear();
             if (t.date.getDate() >= 16) { m++; if (m > 11) { m = 0; y++; } }
-            
+
             if (m === month && y === year) {
                 // Filtra ignorados
                 if (!AppParams.ignorePatterns.some(p => t.description.toLowerCase().includes(p))) {
                     let val = 0;
-                    
+
                     // Cartão: Despesa se for 'expense' (positivo no parser)
                     if (t.source === 'santander_card') {
                         if (t.type === 'expense') val = t.value;
-                    } 
+                    }
                     // Contas: Despesa se valor < 0
                     else {
                         if (t.value < 0) val = Math.abs(t.value);
@@ -365,7 +342,7 @@ const DataService = {
         // Ordena maior para menor
         expenseItems.sort((a,b) => b.Valor - a.Valor);
         const top10 = expenseItems.slice(0, 10);
-        
+
         console.log(`Total Despesas Mês: R$ ${expenseItems.reduce((a,b)=>a+b.Valor,0).toFixed(2)}`);
         console.table(top10.map(t => ({...t, Valor: t.Valor.toFixed(2)})));
         console.log("💡 Use o Config.js para ignorar pagamentos de fatura ou transferências que apareçam aqui.");
@@ -376,15 +353,15 @@ const DataService = {
         let balBrad=0, balSant=0;
         if(this.bradescoTransactions.length) balBrad = this.bradescoTransactions[0].balance;
         if(this.santanderAccountTransactions.length) balSant = this.santanderAccountTransactions[0].balance;
-        
+
         let startM = month - 1; let startY = year; if(startM < 0){ startM=11; startY--; }
         const currentStartDate = new Date(startY, startM, 16);
         const endDate = new Date(year, month, 15, 23, 59, 59);
-        const patternStartDate = new Date(year, month - 3, 16); 
+        const patternStartDate = new Date(year, month - 3, 16);
 
-        let invoiceTotal=0, paretoTotal=0; 
-        let paretoCategories={}; 
-        const dailyExpenses=new Array(31).fill(0); 
+        let invoiceTotal=0, paretoTotal=0;
+        let paretoCategories={};
+        const dailyExpenses=new Array(31).fill(0);
         const weeklyStats=[0,0,0,0];
 
         const processStats = (list) => {
@@ -431,7 +408,7 @@ const DataService = {
                 sumFixed += mFixed;
             }
         }
-        
+
         // --- CHAMA AS AUDITORIAS ---
         this.auditRevenue(year, month);
         this.auditExpenses(year, month); // Nova chamada
@@ -496,4 +473,3 @@ const DataService = {
         return { currentBalance: totalBalance, avgExp: avgExp, runway: runway, goals: this.goalsList };
     }
 };
-window.DataService = DataService;
