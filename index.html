@@ -26,10 +26,10 @@
             </div>
 
             <div class="flex items-center gap-3">
-                <button onclick="Handlers.togglePrivacy()" id="btn-privacy" class="p-2 rounded-full text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-700 transition" title="Ocultar Valores">
+                <button onclick="Handlers.togglePrivacy()" id="btn-privacy" class="p-2 rounded-full text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-700 transition" title="Ocultar Valores" aria-label="Alternar Privacidade">
                     <i class="fa-regular fa-eye"></i>
                 </button>
-                <button onclick="Handlers.toggleTheme()" id="btn-theme" class="p-2 rounded-full text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-700 transition" title="Mudar Tema">
+                <button onclick="Handlers.toggleTheme()" id="btn-theme" class="p-2 rounded-full text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-700 transition" title="Mudar Tema" aria-label="Alternar Tema">
                     <i class="fa-regular fa-moon"></i>
                 </button>
                 <div class="text-sm text-gray-500 hidden sm:block border-l pl-3 ml-1 dark:text-gray-400">
@@ -51,7 +51,6 @@
             <button onclick="Handlers.switchTab('goals')" id="btn-goals" class="tab-inactive py-3 px-1 transition-colors flex items-center gap-2 shrink-0 text-sm font-medium">
                 <i class="fa-solid fa-bullseye"></i> Metas
             </button>
-            <button onclick="Handlers.switchTab('consolidated')" id="btn-data" class="tab-inactive py-3 px-1 transition-colors flex items-center gap-2 shrink-0 text-sm font-medium">
             <button onclick="Handlers.switchTab('data')" id="btn-data" class="tab-inactive py-3 px-1 transition-colors flex items-center gap-2 shrink-0 text-sm font-medium">
                 <i class="fa-solid fa-database"></i> Dados
             </button>
@@ -249,6 +248,9 @@
                 <div class="bg-white p-6 rounded-xl card-shadow dark:bg-gray-800 transition-theme mb-6">
                    <div class="flex justify-between items-center mb-6"><h3 class="font-bold text-gray-800 dark:text-white text-lg"><i class="fa-solid fa-clock-rotate-left text-gray-500 mr-2"></i> Conta Santander</h3><span class="text-xs text-gray-400 font-normal">Base Unificada</span></div>
                    <div class="overflow-x-auto"><table class="w-full text-left text-sm text-gray-500 dark:text-gray-400"><thead class="bg-gray-50 text-xs uppercase text-gray-700 dark:bg-gray-700 dark:text-gray-400"><tr><th class="px-3 py-2 rounded-l-lg">Data</th><th class="px-3 py-2">Tipo</th><th class="px-3 py-2">Categoria</th><th class="px-3 py-2">Descrição</th><th class="px-3 py-2 text-right rounded-r-lg">Valor</th></tr></thead><tbody id="history-table-body" class="divide-y divide-gray-100 dark:divide-gray-700"></tbody></table></div>
+                </div>
+            </section>
+
             <section id="view-data" class="hidden fade-in p-4 sm:p-6 mb-20">
             <!-- Cabeçalho da Aba Dados -->
             <div class="flex flex-col sm:flex-row justify-between items-center mb-6 gap-4">

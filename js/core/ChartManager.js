@@ -1,22 +1,33 @@
-const ChartManager = {
-    getColors() { 
-        return { 
-            grid: AppState.isDark ? AppParams.colors.chart.darkGrid : AppParams.colors.chart.lightGrid, 
-            text: AppState.isDark ? AppParams.colors.chart.darkText : AppParams.colors.chart.lightText 
+import { AppState } from './AppState.js';
+import { AppParams } from './Config.js';
+import { Utils } from './Utils.js';
+import { UI } from './UI.js';
+
+export const ChartManager = {
+    resizeTimeout: null, // Optimization 3.1: Debounce timer
+
+    getColors() {
+        return {
+            grid: AppState.isDark ? AppParams.colors.chart.darkGrid : AppParams.colors.chart.lightGrid,
+            text: AppState.isDark ? AppParams.colors.chart.darkText : AppParams.colors.chart.lightText
         };
     },
-    
-    updateTheme() { 
-        Object.values(AppState.charts).forEach(c => { 
-            if(c) { 
-                c.options.scales.y.grid.color = this.getColors().grid; 
-                c.update(); 
-            } 
+
+    updateTheme() {
+        Object.values(AppState.charts).forEach(c => {
+            if(c) {
+                c.options.scales.y.grid.color = this.getColors().grid;
+                c.update();
+            }
         });
     },
 
-    resize() { 
-        Object.values(AppState.charts).forEach(c => c && c.resize());
+    // Optimization 3.1: Debounced Resize
+    resize() {
+        if (this.resizeTimeout) clearTimeout(this.resizeTimeout);
+        this.resizeTimeout = setTimeout(() => {
+            Object.values(AppState.charts).forEach(c => c && c.resize());
+        }, 200); // 200ms debounce
     },
 
     // Factory para plugin reutilizável (linhas verticais de separação de anos)
@@ -60,7 +71,7 @@ const ChartManager = {
         const ctx = Utils.DOM.get('financeChart').getContext('2d');
         if (AppState.charts.report) AppState.charts.report.destroy();
         const colors = this.getColors();
-        
+
         AppState.charts.report = new Chart(ctx, {
             type: 'bar',
             data: {
@@ -103,7 +114,7 @@ const ChartManager = {
             plugins: [this.createYearSeparatorPlugin(data.years)],
             options: {
                 responsive: true, maintainAspectRatio: false, interaction: { mode: 'index', intersect: false },
-                plugins: { 
+                plugins: {
                     legend: { position: 'bottom', labels: { color: colors.text } },
                     tooltip: { usePointStyle: true, callbacks: { label: c => ` ${c.dataset.label}: ${Utils.formatCurrency(c.parsed.y)}`, labelColor: c => ({ borderColor: c.dataset.borderColor, backgroundColor: c.dataset.backgroundColor === 'transparent' ? c.dataset.borderColor : c.dataset.backgroundColor, borderWidth: 2, borderRadius: 2 }) } }
                 },
@@ -120,7 +131,7 @@ const ChartManager = {
             const ctx = Utils.DOM.get('compareChart1').getContext('2d');
             if(AppState.charts.comparison) AppState.charts.comparison.destroy();
             const colors = this.getColors();
-            
+
             AppState.charts.comparison = new Chart(ctx, {
             type: 'bar',
             data: {
@@ -145,7 +156,7 @@ const ChartManager = {
         const ctx = Utils.DOM.get('inflationChart').getContext('2d');
         if (AppState.charts.inflation) AppState.charts.inflation.destroy();
         const colors = this.getColors();
-        
+
         // CORREÇÃO: Mapa expandido para incluir tons 400, 600 e cores faltantes (Purple, Blue-400, etc)
         const tailwindMap = {
             // Reds/Pinks
@@ -167,7 +178,7 @@ const ChartManager = {
             const tailwindClass = UI.getCategoryColor(cat);
             // Fallback melhorado
             const hexColor = tailwindMap[tailwindClass] || '#9ca3af';
-            
+
             return { label: cat, data: data, backgroundColor: hexColor, borderRadius: 2 };
         });
 
@@ -181,20 +192,19 @@ const ChartManager = {
                     x: { stacked: true, grid: { display: false }, ticks: { color: colors.text } },
                     y: { stacked: true, grid: { color: colors.grid }, ticks: { color: colors.text, callback: v => (v/1000).toLocaleString() + 'k' } }
                 },
-                plugins: { 
-                    legend: { display: false }, 
-                    tooltip: { 
-                        callbacks: { 
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
                             label: c => ` ${c.dataset.label}: ${Utils.formatCurrency(c.parsed.y)}`,
                             footer: (items) => {
                                 const total = items.reduce((a, b) => a + b.parsed.y, 0);
                                 return 'Total: ' + Utils.formatCurrency(total);
                             }
-                        } 
+                        }
                     }
                 }
             }
         });
     }
 };
-window.ChartManager = ChartManager;
