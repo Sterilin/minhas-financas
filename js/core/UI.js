@@ -6,7 +6,13 @@ export const UI = {
     validTabs: ['dashboard', 'report', 'compare', 'goals', 'data'],
 
     init() {
-        // Inicializações globais de UI se necessário
+        // Restore theme from localStorage or system preference
+        const savedTheme = localStorage.getItem('theme');
+        if (savedTheme === 'dark' || (!savedTheme && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+            document.documentElement.classList.add('dark');
+        } else {
+            document.documentElement.classList.remove('dark');
+        }
     },
 
     toggleTheme() {
