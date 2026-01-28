@@ -1,4 +1,8 @@
-const Goals = {
+import { DataService } from '../core/DataService.js';
+import { AppParams } from '../core/Config.js';
+import { Utils } from '../core/Utils.js';
+
+export const Goals = {
     init() {
         this.render();
         DataService.subscribe(() => this.render());
@@ -24,7 +28,7 @@ const Goals = {
         return `
             <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
                 <h2 class="text-xl font-bold text-gray-800 dark:text-white">Metas & Saúde Financeira</h2>
-                
+
                 <div class="flex gap-2">
                     <button onclick="Goals.openCalculator()" class="text-xs bg-emerald-50 text-emerald-600 border border-emerald-200 hover:bg-emerald-100 px-3 py-1.5 rounded-lg transition-colors flex items-center gap-2 dark:bg-emerald-900/30 dark:text-emerald-300 dark:border-emerald-800 dark:hover:bg-emerald-900/50 cursor-pointer shadow-sm">
                         <i class="fa-solid fa-calculator"></i> Simular Viagem
@@ -73,14 +77,14 @@ const Goals = {
                 <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
                     <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" aria-hidden="true" onclick="Goals.closeCalculator()"></div>
                     <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
-                    
+
                     <div class="inline-block align-bottom bg-white dark:bg-gray-800 rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg w-full">
                         <div class="bg-white dark:bg-gray-800 px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
                             <div class="flex justify-between items-center mb-4 border-b border-gray-100 dark:border-gray-700 pb-2">
                                 <h3 class="text-lg leading-6 font-medium text-gray-900 dark:text-white" id="modal-title"><i class="fa-solid fa-plane-departure text-emerald-500 mr-2"></i> Simulador de Viagem</h3>
                                 <button onclick="Goals.closeCalculator()" class="text-gray-400 hover:text-gray-500"><i class="fa-solid fa-xmark"></i></button>
                             </div>
-                            
+
                             <div class="grid grid-cols-2 gap-4 mb-4">
                                 <div class="col-span-1">
                                     <label class="block text-xs font-medium text-gray-700 dark:text-gray-300">Dias de Viagem</label>
@@ -124,7 +128,7 @@ const Goals = {
                                         <input type="number" id="calc-misc" value="150" class="block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white sm:text-xs p-2 border" oninput="Goals.calculateTotal()">
                                     </div>
                                 </div>
-                                
+
                                 <div class="pt-2 border-t border-gray-100 dark:border-gray-700">
                                     <label class="block text-xs font-medium text-gray-700 dark:text-gray-300">Margem de Segurança (%)</label>
                                     <input type="range" id="calc-margin" min="0" max="30" value="10" class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer dark:bg-gray-700" oninput="Goals.calculateTotal()">
@@ -143,7 +147,7 @@ const Goals = {
                                     <button onclick="Goals.togglePlanMode('contribution')" id="btn-mode-contribution" class="flex-1 py-1.5 px-3 rounded-md bg-indigo-100 text-indigo-700 font-medium">Por Aporte Mensal</button>
                                     <button onclick="Goals.togglePlanMode('time')" id="btn-mode-time" class="flex-1 py-1.5 px-3 rounded-md bg-gray-100 text-gray-600">Por Data Limite</button>
                                 </div>
-                                
+
                                 <div id="plan-contribution-group">
                                     <label class="block text-xs font-medium text-gray-700 dark:text-gray-300">Quanto guardar por mês?</label>
                                     <input type="number" id="calc-monthly-input" placeholder="Ex: 500" class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white sm:text-sm p-2 border" oninput="Goals.calculatePlan()">
@@ -177,7 +181,7 @@ const Goals = {
         if (!container.querySelector('#goals-grid')) container.innerHTML = this.getTemplate();
 
         const stats = DataService.getGoalsStats();
-        
+
         // Renderiza Dados Principais
         Utils.DOM.updateText('goal-total-balance', Utils.formatCurrency(stats.currentBalance));
         Utils.DOM.updateText('goal-avg-expense', Utils.formatCurrency(stats.avgExp));
@@ -272,7 +276,7 @@ const Goals = {
 
     calculateTotal() {
         const getVal = (id) => parseFloat(document.getElementById(id).value) || 0;
-        
+
         const days = getVal('calc-days');
         const people = Math.max(1, getVal('calc-people'));
         const stay = getVal('calc-stay');
@@ -287,10 +291,10 @@ const Goals = {
 
         const subtotal = stay + food + gas + clean + toll + misc;
         const total = subtotal * (1 + (marginPct/100));
-        
+
         this.currentSimulatedTotal = total;
         Utils.DOM.updateText('calc-final-total', Utils.formatCurrency(total));
-        
+
         // Atualiza o planejamento se houver valores
         this.calculatePlan();
     },
@@ -319,7 +323,7 @@ const Goals = {
 
     calculatePlan() {
         if (!this.currentSimulatedTotal) return;
-        
+
         if (this.activePlanMode === 'time') {
             const months = parseFloat(document.getElementById('calc-months-input').value) || 0;
             if (months > 0) {
@@ -350,5 +354,3 @@ const Goals = {
         }
     }
 };
-
-Goals.init();

@@ -1,4 +1,10 @@
-const Dashboard = {
+import { DataService } from '../core/DataService.js';
+import { Utils } from '../core/Utils.js';
+import { AppParams } from '../core/Config.js';
+import { ChartManager } from '../core/ChartManager.js';
+import { UI } from '../core/UI.js';
+
+export const Dashboard = {
     init() {
         this.render();
         DataService.subscribe(() => this.render());
@@ -15,7 +21,7 @@ const Dashboard = {
                 </div>
                 <span class="text-xs bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 px-3 py-1.5 rounded-full font-medium shadow-sm" id="current-month-badge">Carregando...</span>
             </div>
-            
+
             <h3 class="text-lg font-bold text-gray-800 dark:text-white mb-4 pl-1 border-l-4 border-indigo-500">Visão Mensal Geral</h3>
             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 <div class="bg-white p-5 rounded-xl card-shadow border border-gray-100 dark:bg-gray-800 dark:border-gray-700 transition-theme hover:shadow-md">
@@ -107,7 +113,7 @@ const Dashboard = {
                 <h3 class="text-lg font-bold text-gray-800 dark:text-white">Análise de Comportamento (Padrões)</h3>
                 <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Análise consolidada dos últimos 3 meses</p>
             </div>
-            
+
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div class="bg-white p-5 rounded-xl card-shadow dark:bg-gray-800 transition-theme">
                     <div class="flex justify-between items-start mb-2">
@@ -119,7 +125,7 @@ const Dashboard = {
                     </div>
                     <div id="pareto-content" class="mt-4 val-privacy text-xs text-gray-400">Carregando dados...</div>
                 </div>
-                
+
                 <div class="bg-white p-5 rounded-xl card-shadow dark:bg-gray-800 transition-theme">
                     <div class="flex justify-between items-start mb-2">
                          <div>
@@ -148,7 +154,7 @@ const Dashboard = {
     renderWeeklyChart(weeklyData) {
         const container = Utils.DOM.get('weekly-chart-container');
         if(!container) return;
-        
+
         const total = weeklyData.reduce((a,b) => a+b, 0);
         if(total === 0) {
             container.innerHTML = '<div class="w-full h-full flex items-center justify-center text-gray-400 text-xs">Sem dados neste mês.</div>';
@@ -157,13 +163,13 @@ const Dashboard = {
 
         const max = Math.max(...weeklyData, 1);
         const labels = ['Semana 1 (1-7)', 'Semana 2 (8-14)', 'Semana 3 (15-21)', 'Semana 4 (22+)'];
-        
+
         const html = weeklyData.map((val, i) => {
             const pct = Math.round((val / max) * 100);
             const displayVal = Utils.formatCurrency(val);
-            const isHigh = (val / total) > 0.3; 
+            const isHigh = (val / total) > 0.3;
             const color = isHigh ? 'bg-rose-500' : 'bg-blue-500';
-            
+
             return `
                 <div class="flex-1 flex flex-col items-center group h-full justify-end">
                     <div class="relative w-full bg-gray-100 dark:bg-gray-700 rounded-t-lg flex items-end h-full overflow-hidden">
@@ -176,13 +182,13 @@ const Dashboard = {
                 </div>
             `;
         }).join('');
-        
+
         container.innerHTML = html;
     },
 
     render() {
         const container = Utils.DOM.get('view-dashboard');
-        
+
         if(container && container.children.length === 0) {
             container.innerHTML = this.getTemplate();
         }
@@ -195,7 +201,7 @@ const Dashboard = {
 
         const { year, month } = DataService.getLatestPeriod();
         const stats = DataService.getDashboardStats(year, month);
-        
+
         Utils.DOM.updateText('current-month-badge', `${AppParams.months.full[month]} ${year}`);
 
         const updateVal = (id, val) => Utils.DOM.updateText(id, Utils.formatCurrency(val));
@@ -230,7 +236,7 @@ const Dashboard = {
                             </div>
                         </div>`;
                 }).join('');
-                
+
                 paretoEl.innerHTML = `
                     <div class="mb-4 flex items-center justify-between border-b border-gray-100 dark:border-gray-700 pb-3">
                         <div><span class="text-2xl font-bold text-gray-800 dark:text-white leading-none">${count}</span><span class="text-xs text-gray-500 dark:text-gray-400 block mt-1">Categorias Principais</span></div>
@@ -251,7 +257,7 @@ const Dashboard = {
                 const bg = val === 0 ? 'bg-gray-100 dark:bg-gray-700 text-gray-400' : 'bg-rose-500 dark:bg-rose-600 text-white';
                 const style = val > 0 ? `opacity: ${0.2 + (intensity * 0.8)}` : '';
                 const title = `Dia ${day}: ${Utils.formatCurrency(val)}`;
-                return `<div class="${bg} rounded-sm aspect-square flex items-center justify-center text-[8px] hover:scale-125 transition-transform cursor-default font-medium" style="${style}" title="${title}">${day}</div>`; 
+                return `<div class="${bg} rounded-sm aspect-square flex items-center justify-center text-[8px] hover:scale-125 transition-transform cursor-default font-medium" style="${style}" title="${title}">${day}</div>`;
             }).join('');
         }
 
@@ -261,5 +267,3 @@ const Dashboard = {
         setTimeout(() => ChartManager.renderInflation(year, inflationData), 0);
     }
 };
-
-Dashboard.init();
