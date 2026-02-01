@@ -1,10 +1,4 @@
-import { DataService } from '../core/DataService.js';
-import { Utils } from '../core/Utils.js';
-import { AppParams } from '../core/Config.js';
-import { ChartManager } from '../core/ChartManager.js';
-import { UI } from '../core/UI.js';
-
-export const Dashboard = {
+const Dashboard = {
     init() {
         this.render();
         DataService.subscribe(() => this.render());
@@ -267,3 +261,4 @@ export const Dashboard = {
         setTimeout(() => ChartManager.renderInflation(year, inflationData), 0);
     }
 };
+window.Dashboard = Dashboard;

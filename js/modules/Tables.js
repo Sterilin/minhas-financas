@@ -1,13 +1,9 @@
-import { DataService } from '../core/DataService.js';
-import { AppParams } from '../core/Config.js';
-import { Utils } from '../core/Utils.js';
-
-export const Tables = {
+const Tables = {
     currentSubTab: 'audit', // Aba padrão
 
     init() {
         // Tenta renderizar assim que inicia
-        if (DataService) {
+        if (window.DataService) {
             DataService.subscribe(() => this.render());
         }
 
@@ -190,7 +186,7 @@ export const Tables = {
                     <td class="px-4 py-3 text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">${t.date.toLocaleDateString()}</td>
                     <td class="px-4 py-3 text-xs font-medium text-gray-700 dark:text-gray-200 truncate max-w-[200px]" title="${t.description}">${t.description}</td>
                     <td class="px-4 py-3 text-xs text-gray-500 dark:text-gray-400">
-                        <span class="px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 text-[10px]">${t.category || 'Geral'}</span>
+                        <span class="px-2 py-0.5 rounded-full ${UI.getCategoryColor(t.category)} text-white text-[10px] shadow-sm">${t.category || 'Geral'}</span>
                     </td>
                     <td class="px-4 py-3 text-xs font-bold text-right ${valClass} val-privacy">${Utils.formatCurrency(displayVal)}</td>
                 </tr>
@@ -198,3 +194,4 @@ export const Tables = {
         }).join('');
     }
 };
+window.Tables = Tables;

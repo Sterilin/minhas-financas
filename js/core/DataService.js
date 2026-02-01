@@ -4,6 +4,7 @@ const DataService = {
     santanderCardTransactions: [],
     goalsList: [],
     monthlyDataCache: {},
+    worker: null,
 
     listeners: [],
     subscribe(fn) { this.listeners.push(fn); },
@@ -15,9 +16,18 @@ const DataService = {
 
         if (!AppParams || !AppParams.urls) return false;
 
-        // Initialize Web Worker
-        this.worker = new Worker('js/workers/parser.worker.js');
-        this.worker.onmessage = (e) => this.handleWorkerMessage(e);
+        // Initialize Web Worker with Fallback
+        try {
+            this.worker = new Worker('js/workers/parser.worker.js');
+            this.worker.onmessage = (e) => this.handleWorkerMessage(e);
+            this.worker.onerror = (e) => {
+                console.warn("⚠️ Worker Error (CORS/Security?): Fallback to main thread.", e);
+                this.worker = null;
+            };
+        } catch (e) {
+            console.warn("⚠️ Could not create Worker (likely file:// protocol). Using main thread fallback.");
+            this.worker = null;
+        }
 
         // Check Cache first (Optimization 1.2)
         if (this.loadFromCache()) {
@@ -43,11 +53,19 @@ const DataService = {
                 this.fetchData(getUrl(AppParams.urls.goals))
             ]);
 
-            // Offload parsing to worker (Optimization 1.3)
-            if (results[0].status === 'fulfilled') this.worker.postMessage({ type: 'PARSE_STATEMENT', payload: { text: results[0].value, sourceLabel: 'bradesco', ignorePatterns: AppParams.ignorePatterns } });
-            if (results[1].status === 'fulfilled') this.worker.postMessage({ type: 'PARSE_STATEMENT', payload: { text: results[1].value, sourceLabel: 'santander_acc', ignorePatterns: AppParams.ignorePatterns } });
-            if (results[2].status === 'fulfilled') this.worker.postMessage({ type: 'PARSE_CARD', payload: { text: results[2].value, ignorePatterns: AppParams.ignorePatterns } });
-            if (results[3].status === 'fulfilled') this.worker.postMessage({ type: 'PARSE_GOALS', payload: { text: results[3].value, months: AppParams.months.short } });
+            // Offload parsing to worker OR use fallback (Optimization 1.3 + Robustness)
+            if (this.worker) {
+                if (results[0].status === 'fulfilled') this.worker.postMessage({ type: 'PARSE_STATEMENT', payload: { text: results[0].value, sourceLabel: 'bradesco', ignorePatterns: AppParams.ignorePatterns } });
+                if (results[1].status === 'fulfilled') this.worker.postMessage({ type: 'PARSE_STATEMENT', payload: { text: results[1].value, sourceLabel: 'santander_acc', ignorePatterns: AppParams.ignorePatterns } });
+                if (results[2].status === 'fulfilled') this.worker.postMessage({ type: 'PARSE_CARD', payload: { text: results[2].value, ignorePatterns: AppParams.ignorePatterns } });
+                if (results[3].status === 'fulfilled') this.worker.postMessage({ type: 'PARSE_GOALS', payload: { text: results[3].value, months: AppParams.months.short } });
+            } else {
+                // Fallback: Parse on Main Thread
+                if (results[0].status === 'fulfilled') this.manualParseComplete('bradesco', this.parseBankStatement(results[0].value, 'bradesco', AppParams.ignorePatterns));
+                if (results[1].status === 'fulfilled') this.manualParseComplete('santander_acc', this.parseBankStatement(results[1].value, 'santander_acc', AppParams.ignorePatterns));
+                if (results[2].status === 'fulfilled') this.manualParseComplete('santander_card', this.parseSantanderCardTSV(results[2].value, AppParams.ignorePatterns));
+                if (results[3].status === 'fulfilled') this.manualParseComplete('goals', this.parseGoalsTSV(results[3].value, AppParams.months.short));
+            }
 
             return true;
 
@@ -55,6 +73,11 @@ const DataService = {
             console.error("☠️ Falha Crítica:", error);
             return false;
         }
+    },
+
+    manualParseComplete(sourceLabel, data) {
+        // Simulates the worker message structure to reuse logic
+        this.handleWorkerMessage({ data: { type: 'PARSE_COMPLETE', payload: { sourceLabel, data } } });
     },
 
     handleWorkerMessage(e) {
@@ -80,6 +103,154 @@ const DataService = {
             this.buildCache();
             this.notify();
         }
+    },
+
+    // --- PARSING FALLBACKS (Copied/Adapted from Worker) ---
+    parseMoney(str) {
+        if (!str) return 0;
+        let s = str.replace(/["R$\s\xa0]/g, '');
+        if (s.indexOf(',') > -1) {
+            s = s.replace(/\./g, '').replace(',', '.');
+        }
+        return parseFloat(s) || 0;
+    },
+
+    parseBankStatement(text, sourceLabel, ignorePatterns = []) {
+        if (!text || typeof text !== 'string') return [];
+        const rows = text.split('\n').map(r => r.trim()).filter(r => r);
+        if (rows.length < 2) return [];
+
+        const headers = rows[0].toLowerCase().split('\t');
+        const idx = {
+            date: headers.findIndex(h => h.includes('data')),
+            val: headers.findIndex(h => h.includes('valor')),
+            bal: headers.findIndex(h => h.includes('saldo')),
+            desc: headers.findIndex(h => h.includes('desc') || h.includes('hist') || h.includes('lanc'))
+        };
+
+        if (idx.date === -1 || idx.val === -1) return [];
+
+        return rows.slice(1).map(row => {
+            const cols = row.split('\t');
+            if(cols.length < 3) return null;
+
+            let date = new Date();
+            const dStr = cols[idx.date];
+            if(dStr && dStr.match(/^\d{2}\/\d{2}\/\d{2,4}/)) {
+                const [d, m, y] = dStr.split('/');
+                date = new Date(y.length===2 ? '20'+y : y, m-1, d);
+            }
+
+            const val = idx.val > -1 ? this.parseMoney(cols[idx.val]) : 0;
+            const bal = idx.bal > -1 ? this.parseMoney(cols[idx.bal]) : 0;
+            const desc = (idx.desc > -1 ? cols[idx.desc] : '').replace(/"/g, '');
+
+            let cat = 'Outros';
+            if(val > 0) cat = 'Receita';
+            else if(desc.toLowerCase().includes('pix')) cat = 'Pix';
+
+            return {
+                dateStr: date.toISOString(),
+                description: desc,
+                value: val,
+                balance: bal,
+                category: cat,
+                source: sourceLabel,
+                type: val >= 0 ? 'income' : 'expense'
+            };
+        }).filter(t => t).sort((a,b) => new Date(b.dateStr) - new Date(a.dateStr));
+    },
+
+    parseSantanderCardTSV(text, ignorePatterns = []) {
+        if (!text || typeof text !== 'string') return [];
+        const rows = text.split('\n').map(r => r.trim()).filter(r => r);
+        if (rows.length < 2) return [];
+
+        const headers = rows[0].toLowerCase().split('\t');
+        const idx = {
+            date: headers.findIndex(h => h.includes('data')),
+            val: headers.findIndex(h => h.includes('valor')),
+            cat: headers.findIndex(h => h.includes('categ') || h.includes('ramo')),
+            desc: headers.findIndex(h => h.includes('desc'))
+        };
+
+        if (idx.date === -1 || idx.val === -1) return [];
+
+        return rows.slice(1).map(row => {
+            const cols = row.split('\t');
+            let date = new Date();
+             if (idx.date > -1 && cols[idx.date]) {
+                const dStr = cols[idx.date];
+                if(dStr.match(/^\d{2}\/\d{2}\/\d{4}/)) {
+                    const [d, m, y] = dStr.split('/');
+                    date = new Date(y, m-1, d);
+                }
+            }
+            const val = idx.val > -1 ? this.parseMoney(cols[idx.val]) : 0;
+            const desc = idx.desc > -1 ? cols[idx.desc].replace(/"/g, '') : 'Santander';
+
+            return {
+                dateStr: date.toISOString(),
+                description: desc,
+                value: val,
+                category: idx.cat > -1 ? cols[idx.cat] : 'Cartão',
+                source: 'santander_card',
+                type: val > 0 ? 'expense' : 'income'
+            };
+        }).filter(t => t && t.value !== 0).sort((a,b) => new Date(b.dateStr) - new Date(a.dateStr));
+    },
+
+    parseGoalsTSV(text, monthsShort) {
+        if (!text || typeof text !== 'string') return [];
+        const rows = text.split('\n').map(r => r.trim()).filter(r => r);
+        if (rows.length < 2) return [];
+
+        const headers = rows[0].toLowerCase().split('\t');
+        const idx = {
+            title: headers.findIndex(h => h.includes('título') || h.includes('titulo') || h.includes('nome')),
+            total: headers.findIndex(h => h.includes('total') || h.includes('alvo')),
+            current: headers.findIndex(h => h.includes('atual') || h.includes('acumulado')),
+            param: headers.findIndex(h => h.includes('aporte') || h.includes('mensal') || h.includes('meta')),
+            image: headers.findIndex(h => h.includes('imagem') || h.includes('img'))
+        };
+
+        return rows.slice(1).map(row => {
+            const cols = row.split('\t');
+            const getVal = (i) => (i > -1 && cols[i]) ? cols[i] : '';
+            const total = this.parseMoney(getVal(idx.total));
+            const current = this.parseMoney(getVal(idx.current));
+            const paramStr = getVal(idx.param);
+            let monthlyContribution = 0; let monthsLeft = 0;
+            const remainingValue = Math.max(0, total - current);
+            const dateMatch = paramStr.match(/(\d{1,2})[\/\-](\d{2,4})/) || paramStr.match(/([a-zA-Z]{3})[\/\-](\d{2,4})/);
+
+            if (dateMatch) {
+                const now = new Date(); let m = 0, y = 0;
+                if(paramStr.includes('/')) {
+                    const parts = paramStr.split('/');
+                    if(parts.length === 2) { y = parseInt(parts[1]); y = y < 100 ? 2000 + y : y; const mStr = parts[0].toLowerCase(); m = monthsShort.findIndex(x => x.toLowerCase() === mStr); if(m === -1 && !isNaN(parts[0])) m = parseInt(parts[0]) - 1; }
+                    else if (parts.length === 3) { y = parseInt(parts[2]); m = parseInt(parts[1]) - 1; }
+                }
+                if (y > 0) {
+                    const targetDate = new Date(y, m, 1);
+                    monthsLeft = (targetDate.getFullYear() - now.getFullYear()) * 12 + (targetDate.getMonth() - now.getMonth());
+                    monthsLeft = Math.max(1, monthsLeft);
+                    monthlyContribution = remainingValue / monthsLeft;
+                }
+            } else {
+                monthlyContribution = this.parseMoney(paramStr);
+                if (monthlyContribution > 0) monthsLeft = Math.ceil(remainingValue / monthlyContribution);
+            }
+            return {
+                title: idx.title > -1 ? getVal(idx.title) : 'Meta',
+                total,
+                current,
+                monthly: monthlyContribution,
+                monthsLeft,
+                image: idx.image > -1 ? getVal(idx.image) : '',
+                percent: total > 0 ? (current / total) * 100 : 0
+            };
+        }).filter(g => g.total > 0);
     },
 
     // --- CACHING LOGIC ---

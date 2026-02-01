@@ -1,10 +1,4 @@
-import { DataService } from '../core/DataService.js';
-import { AppState } from '../core/AppState.js';
-import { AppParams } from '../core/Config.js';
-import { Utils } from '../core/Utils.js';
-import { ChartManager } from '../core/ChartManager.js';
-
-export const Report = {
+const Report = {
     init() {
         DataService.subscribe(() => {
             // Define o padrão para os últimos 12 meses ao carregar novos dados
@@ -318,3 +312,4 @@ export const Report = {
         this.updateCharts();
     }
 };
+window.Report = Report;
