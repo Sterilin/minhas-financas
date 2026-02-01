@@ -1,8 +1,4 @@
-import { Utils } from './Utils.js';
-import { AppParams } from './Config.js';
-import { AppState } from './AppState.js';
-
-export const DataService = {
+const DataService = {
     bradescoTransactions: [],
     santanderAccountTransactions: [],
     santanderCardTransactions: [],
@@ -473,3 +469,4 @@ export const DataService = {
         return { currentBalance: totalBalance, avgExp: avgExp, runway: runway, goals: this.goalsList };
     }
 };
+window.DataService = DataService;
