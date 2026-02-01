@@ -327,7 +327,8 @@ const DataService = {
                 income: new Array(12).fill(0), expenses: new Array(12).fill(0),
                 balances: new Array(12).fill(0), balancesSantander: new Array(12).fill(0),
                 acc: { income: new Array(12).fill(0), expenses: new Array(12).fill(0) },
-                card: { income: new Array(12).fill(0), expenses: new Array(12).fill(0) }
+                card: { income: new Array(12).fill(0), expenses: new Array(12).fill(0) },
+                transactions: new Array(12).fill(null).map(() => [])
             };
         });
 
@@ -335,13 +336,21 @@ const DataService = {
 
         const balances = { bradesco: {}, santander: {} };
 
+        const indexTransaction = (t) => {
+            const { m, y } = this.getFiscalPeriod(t.date);
+            if (this.monthlyDataCache[y]) {
+                this.monthlyDataCache[y].transactions[m].push(t);
+            }
+            return { m, y };
+        };
+
         const processAccount = (list, bankKey) => {
             if (!list) return;
             list.forEach(t => {
                 const balKey = `${t.date.getFullYear()}-${t.date.getMonth()}`;
                 if (balances[bankKey][balKey] === undefined) balances[bankKey][balKey] = t.balance;
 
-                const { m, y } = this.getFiscalPeriod(t.date);
+                const { m, y } = indexTransaction(t);
                 if (this.monthlyDataCache[y]) {
                     if (!isIgnored(t.description)) {
                         const val = Math.abs(t.value);
@@ -362,7 +371,7 @@ const DataService = {
 
         if (this.santanderCardTransactions) {
             this.santanderCardTransactions.forEach(t => {
-                const { m, y } = this.getFiscalPeriod(t.date);
+                const { m, y } = indexTransaction(t);
                 if (this.monthlyDataCache[y]) {
                     if (t.type === 'expense' && !isIgnored(t.description)) {
                         const val = Math.abs(t.value);
@@ -439,19 +448,19 @@ const DataService = {
     auditRevenue(year, month) {
         console.group(`🔎 AUDITORIA DE RECEITA (${AppParams.months.full[month]}/${year})`);
 
-        const allTrans = [...this.bradescoTransactions, ...this.santanderAccountTransactions];
+        const d = this.getMonthly(year);
         const incomeItems = [];
 
-        allTrans.forEach(t => {
-            let m = t.date.getMonth(); let y = t.date.getFullYear();
-            if (t.date.getDate() >= 16) { m++; if (m > 11) { m = 0; y++; } }
-
-            if (m === month && y === year) {
-                if (t.value > 0 && !AppParams.ignorePatterns.some(p => t.description.toLowerCase().includes(p))) {
-                    incomeItems.push(t);
+        if (d && d.transactions && d.transactions[month]) {
+            d.transactions[month].forEach(t => {
+                // Filter out Credit Card (only Account transactions)
+                if (t.source !== 'santander_card') {
+                     if (t.value > 0 && !AppParams.ignorePatterns.some(p => t.description.toLowerCase().includes(p))) {
+                        incomeItems.push(t);
+                    }
                 }
-            }
-        });
+            });
+        }
 
         incomeItems.sort((a,b) => b.value - a.value);
         console.log(`Total Receita Calculado: R$ ${incomeItems.reduce((a,b)=>a+b.value,0).toFixed(2)}`);
@@ -468,20 +477,11 @@ const DataService = {
     auditExpenses(year, month) {
         console.group(`🔎 AUDITORIA DE DESPESAS (TOP 10) - (${AppParams.months.full[month]}/${year})`);
 
-        const allTrans = [
-            ...this.bradescoTransactions,
-            ...this.santanderAccountTransactions,
-            ...this.santanderCardTransactions
-        ];
-
+        const d = this.getMonthly(year);
         const expenseItems = [];
 
-        allTrans.forEach(t => {
-            let m = t.date.getMonth();
-            let y = t.date.getFullYear();
-            if (t.date.getDate() >= 16) { m++; if (m > 11) { m = 0; y++; } }
-
-            if (m === month && y === year) {
+        if (d && d.transactions && d.transactions[month]) {
+            d.transactions[month].forEach(t => {
                 // Filtra ignorados
                 if (!AppParams.ignorePatterns.some(p => t.description.toLowerCase().includes(p))) {
                     let val = 0;
@@ -504,8 +504,8 @@ const DataService = {
                         });
                     }
                 }
-            }
-        });
+            });
+        }
 
         // Ordena maior para menor
         expenseItems.sort((a,b) => b.Valor - a.Valor);
@@ -563,16 +563,13 @@ const DataService = {
                 const inc = d.income[m]; sumIncome += inc;
                 const exp = d.expenses[m]; sumProjBalance += (inc - exp);
                 let mFixed = 0;
-                const checkFixed = (list) => {
-                    list.forEach(t => {
-                        const fp = (t.date.getDate() >= 16) ? (t.date.getMonth() + 1) % 12 : t.date.getMonth();
-                        const fy = (t.date.getDate() >= 16 && t.date.getMonth() === 11) ? t.date.getFullYear() + 1 : t.date.getFullYear();
-                        if(fp===m && fy===y && t.type==='expense' && fixedCats.includes(t.category.toLowerCase())) mFixed += Math.abs(t.value);
+
+                if (d.transactions && d.transactions[m]) {
+                    d.transactions[m].forEach(t => {
+                        if(t.type==='expense' && fixedCats.includes(t.category.toLowerCase())) mFixed += Math.abs(t.value);
                     });
-                };
-                if(this.bradescoTransactions) checkFixed(this.bradescoTransactions);
-                if(this.santanderAccountTransactions) checkFixed(this.santanderAccountTransactions);
-                if(this.santanderCardTransactions) checkFixed(this.santanderCardTransactions);
+                }
+
                 sumFixed += mFixed;
             }
         }
