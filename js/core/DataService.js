@@ -332,11 +332,6 @@ const DataService = {
         });
 
         const isIgnored = (desc) => AppParams.ignorePatterns.some(p => desc.toLowerCase().includes(p));
-        const getFiscalPeriod = (date) => {
-            let m = date.getMonth(); let y = date.getFullYear();
-            if (date.getDate() >= 16) { m++; if (m > 11) { m = 0; y++; } }
-            return { m, y };
-        };
 
         const balances = { bradesco: {}, santander: {} };
 
@@ -346,7 +341,7 @@ const DataService = {
                 const balKey = `${t.date.getFullYear()}-${t.date.getMonth()}`;
                 if (balances[bankKey][balKey] === undefined) balances[bankKey][balKey] = t.balance;
 
-                const { m, y } = getFiscalPeriod(t.date);
+                const { m, y } = this.getFiscalPeriod(t.date);
                 if (this.monthlyDataCache[y]) {
                     if (!isIgnored(t.description)) {
                         const val = Math.abs(t.value);
@@ -367,7 +362,7 @@ const DataService = {
 
         if (this.santanderCardTransactions) {
             this.santanderCardTransactions.forEach(t => {
-                const { m, y } = getFiscalPeriod(t.date);
+                const { m, y } = this.getFiscalPeriod(t.date);
                 if (this.monthlyDataCache[y]) {
                     if (t.type === 'expense' && !isIgnored(t.description)) {
                         const val = Math.abs(t.value);
@@ -432,6 +427,12 @@ const DataService = {
         if(this.bradescoTransactions) this.bradescoTransactions.forEach(t => cats.add(t.category));
         if(this.santanderCardTransactions) this.santanderCardTransactions.forEach(t => cats.add(t.category));
         return Array.from(cats).sort();
+    },
+
+    getFiscalPeriod(date) {
+        let m = date.getMonth(); let y = date.getFullYear();
+        if (date.getDate() >= 16) { m++; if (m > 11) { m = 0; y++; } }
+        return { m, y };
     },
 
     // --- AUDITORIA DE RECEITA ---
@@ -594,32 +595,43 @@ const DataService = {
     getLast12ClosedInvoicesBreakdown() {
         const { year, month } = this.getLatestPeriod();
         let currentM = month - 1; let currentY = year; if(currentM < 0){ currentM=11; currentY--; }
-        const labels = []; const data = []; const allCategories = new Set();
-        const targetMonths = [];
+
+        const labels = [];
+        const data = [];
+        const allCategories = new Set();
+        const targetMap = new Map();
+
+        // 1. Build target months map for O(1) lookup
         for (let i = 11; i >= 0; i--) {
             let m = currentM - i; let y = currentY;
             const offset = Math.floor(m / 12); m = ((m % 12) + 12) % 12; y += offset;
-            targetMonths.push({ m, y });
-        }
-        targetMonths.forEach(target => {
-            const { m, y } = target;
+
             labels.push(`${AppParams.months.short[m]}/${y.toString().substr(2)}`);
-            let startM = m - 1; let startY = y; if(startM < 0){ startM=11; startY--; }
-            const startD = new Date(startY, startM, 16); const endD = new Date(y, m, 15, 23, 59, 59);
-            const monthData = {};
-            if(this.santanderCardTransactions) {
-                this.santanderCardTransactions.forEach(t => {
-                    if(t.type === 'expense' && !AppParams.ignorePatterns.some(p => t.description.toLowerCase().includes(p))) {
-                        if(t.date >= startD && t.date <= endD) {
-                            const cat = t.category || 'Outros';
-                            monthData[cat] = (monthData[cat] || 0) + Math.abs(t.value);
-                            allCategories.add(cat);
-                        }
+            data.push({});
+            // Store index for this year-month combo.
+            // Note: Since we push in order (oldest to newest), the index corresponds to 'i' relative to result array
+            targetMap.set(`${y}-${m}`, data.length - 1);
+        }
+
+        // 2. Single pass through transactions (O(N))
+        if(this.santanderCardTransactions) {
+            this.santanderCardTransactions.forEach(t => {
+                if(t.type === 'expense' && !AppParams.ignorePatterns.some(p => t.description.toLowerCase().includes(p))) {
+                    const { m, y } = this.getFiscalPeriod(t.date);
+                    const key = `${y}-${m}`;
+
+                    if (targetMap.has(key)) {
+                        const index = targetMap.get(key);
+                        const cat = t.category || 'Outros';
+                        const monthData = data[index];
+
+                        monthData[cat] = (monthData[cat] || 0) + Math.abs(t.value);
+                        allCategories.add(cat);
                     }
-                });
-            }
-            data.push(monthData);
-        });
+                }
+            });
+        }
+
         return { months: labels, categories: Array.from(allCategories).sort(), data: data };
     },
     getYearlyCategoryBreakdown(year) { return this.getLast12ClosedInvoicesBreakdown(); },
