@@ -1,9 +1,18 @@
-const UI = {
+import { AppParams } from './Config.js';
+import { AppState } from './AppState.js';
+
+export const UI = {
     // Define as abas esperadas pelo sistema
     validTabs: ['dashboard', 'report', 'compare', 'goals', 'data'],
 
     init() {
-        // Inicializações globais de UI se necessário
+        // Restore theme from localStorage or system preference
+        const savedTheme = localStorage.getItem('theme');
+        if (savedTheme === 'dark' || (!savedTheme && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+            document.documentElement.classList.add('dark');
+        } else {
+            document.documentElement.classList.remove('dark');
+        }
     },
 
     toggleTheme() {
@@ -33,7 +42,7 @@ const UI = {
     // --- FUNÇÃO QUE FALTAVA ---
     getCategoryColor(category) {
         // Verifica se a categoria e os parâmetros existem para evitar erros
-        if (!category || !window.AppParams || !AppParams.colors || !AppParams.colors.categories) {
+        if (!category || !AppParams || !AppParams.colors || !AppParams.colors.categories) {
             return 'bg-gray-400'; // Cor padrão caso não encontre
         }
         return AppParams.colors.categories[category] || 'bg-gray-400';
@@ -68,7 +77,7 @@ const UI = {
         // 5. Dispara evento para carregar gráficos/tabelas
         document.dispatchEvent(new CustomEvent('tabChanged', { detail: { tab: tabName } }));
 
-        if(window.AppState) AppState.currentTab = tabName;
+        if(AppState) AppState.currentTab = tabName;
     },
 
     updateNavButtons(activeTab) {
@@ -92,4 +101,3 @@ const UI = {
         });
     }
 };
-window.UI = UI;

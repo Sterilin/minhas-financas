@@ -1,4 +1,10 @@
-const Compare = {
+import { DataService } from '../core/DataService.js';
+import { AppState } from '../core/AppState.js';
+import { AppParams } from '../core/Config.js';
+import { Utils } from '../core/Utils.js';
+import { ChartManager } from '../core/ChartManager.js';
+
+export const Compare = {
     init() {
         DataService.subscribe(() => {
             this.updateSelectors();
@@ -143,4 +149,3 @@ const Compare = {
         Utils.DOM.updateHTML('balance-evolution-container', genBar(dA.bal, 'Ref. (A)', '#3b82f6') + genBar(dB.bal, 'Comp. (B)', '#6366f1'));
     }
 };
-window.Compare = Compare;
