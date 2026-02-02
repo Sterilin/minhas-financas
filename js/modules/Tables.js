@@ -77,24 +77,10 @@ const Tables = {
         const year = latest.year;
         const month = latest.month;
 
-        const allTrans = [
-            ...(DataService.bradescoTransactions || []),
-            ...(DataService.santanderAccountTransactions || []),
-            ...(DataService.santanderCardTransactions || [])
-        ];
-
-        // Filtra transações do Mês Fiscal
-        const activeTrans = allTrans.filter(t => {
-            let m = t.date.getMonth();
-            let y = t.date.getFullYear();
-            // Regra do dia 16
-            if (t.date.getDate() >= 16) { m++; if (m > 11) { m = 0; y++; } }
-
-            const isTargetMonth = (m === month && y === year);
-            const isIgnored = AppParams.ignorePatterns.some(p => t.description.toLowerCase().includes(p));
-
-            return isTargetMonth && !isIgnored;
-        });
+        const d = DataService.getMonthly(year);
+        // Optimization: Use cached transactions (O(1)) instead of filtering all (O(N))
+        const activeTrans = (d && d.transactions && d.transactions[month] ? d.transactions[month] : [])
+            .filter(t => !AppParams.ignorePatterns.some(p => t.description.toLowerCase().includes(p)));
 
         const incomeList = [];
         const expenseList = [];
