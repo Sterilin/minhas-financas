@@ -73,9 +73,10 @@ const Tables = {
         incomeBody.innerHTML = '';
         expenseBody.innerHTML = '';
 
-        const latest = DataService.getLatestPeriod();
-        const year = latest.year;
-        const month = latest.month;
+        // Refatorado para usar getFiscalPeriod explicitamente
+        const { m, y } = DataService.getFiscalPeriod(new Date());
+        const year = y;
+        const month = m;
 
         const d = DataService.getMonthly(year);
         // Optimization: Use cached transactions (O(1)) instead of filtering all (O(N))
