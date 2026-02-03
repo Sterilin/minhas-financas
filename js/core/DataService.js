@@ -529,26 +529,48 @@ const DataService = {
         const endDate = new Date(year, month, 15, 23, 59, 59);
         const patternStartDate = new Date(year, month - 3, 16);
 
-        let invoiceTotal=0, paretoTotal=0;
-        let paretoCategories={};
-        const dailyExpenses=new Array(31).fill(0);
-        const weeklyStats=[0,0,0,0];
+        let invoiceTotal=0;
+
+        // Heatmap Structures
+        const dailyExpensesRaw = new Array(31).fill(null).map(() => ({ total: 0, cats: {} }));
+
+        // Pareto Structures
+        const currentPareto = {};
+        const historyPareto = {};
+        let paretoTotalCurrent = 0;
 
         const processStats = (list) => {
             if(!list) return;
             list.forEach(t => {
                 if(t.type !== 'expense' || AppParams.ignorePatterns.some(p => t.description.toLowerCase().includes(p))) return;
                 const val = Math.abs(t.value);
-                if(t.date >= currentStartDate && t.date <= endDate && t.source === 'santander_card') invoiceTotal += val;
-                if(t.date >= patternStartDate && t.date <= endDate && t.source === 'santander_card') {
-                    paretoTotal += val;
-                    const cat = t.category || 'Outros';
-                    paretoCategories[cat] = (paretoCategories[cat] || 0) + val;
-                    if(t.date.getDate() <= 31) dailyExpenses[t.date.getDate()-1] += val;
+                const cat = t.category || 'Outros';
+
+                // 1. Current Month Focus (Heatmap & Pareto Real & Invoice)
+                if(t.date >= currentStartDate && t.date <= endDate) {
+                    // Only Credit Card for these specific analyses (matches previous logic scope)
+                    if (t.source === 'santander_card') {
+                        invoiceTotal += val;
+
+                        // Pareto Current
+                        currentPareto[cat] = (currentPareto[cat] || 0) + val;
+                        paretoTotalCurrent += val;
+
+                        // Heatmap (Day of Month)
+                        const d = t.date.getDate();
+                        if(d >= 1 && d <= 31) {
+                            const dayData = dailyExpensesRaw[d-1];
+                            dayData.total += val;
+                            dayData.cats[cat] = (dayData.cats[cat] || 0) + val;
+                        }
+                    }
                 }
-                if(t.date.getMonth() === month && t.date.getFullYear() === year) {
-                    const d = t.date.getDate();
-                    if(d <= 7) weeklyStats[0]+=val; else if(d<=14) weeklyStats[1]+=val; else if(d<=21) weeklyStats[2]+=val; else weeklyStats[3]+=val;
+
+                // 2. History (Pareto Limit) - From pattern start up to current start
+                if(t.date >= patternStartDate && t.date < currentStartDate) {
+                    if (t.source === 'santander_card') {
+                        historyPareto[cat] = (historyPareto[cat] || 0) + val;
+                    }
                 }
             });
         };
@@ -582,13 +604,45 @@ const DataService = {
 
         const avgIncome = sumIncome/3; const avgFixed = sumFixed/3; const avgProjBal = sumProjBalance/3;
         const disposableRate = avgProjBal !== 0 ? ((avgProjBal - avgFixed)/avgProjBal)*100 : 0;
-        const sortedCats = Object.entries(paretoCategories).sort((a,b) => b[1]-a[1]);
-        let paretoSum=0; const paretoCats=[];
-        for(const [cat, val] of sortedCats) { paretoCats.push({cat, val}); paretoSum += val; if(paretoTotal>0 && (paretoSum/paretoTotal)>=0.8) break; }
+
+        // --- Heatmap Processing ---
+        const dailyExpenses = dailyExpensesRaw.map(d => {
+            let topCat = ''; let max = 0;
+            for(const [c, v] of Object.entries(d.cats)) {
+                if(v > max) { max = v; topCat = c; }
+            }
+            return { val: d.total, topCat };
+        });
+
+        // --- Pareto Processing ---
+        // patternStartDate (Month-3) to currentStartDate covers exactly 2 fiscal months.
+        const historyMonths = 2;
+
+        const sortedCurrentCats = Object.entries(currentPareto).sort((a,b) => b[1]-a[1]);
+        const paretoCats = [];
+        let paretoSum = 0;
+
+        for(const [cat, val] of sortedCurrentCats) {
+            const histTotal = historyPareto[cat] || 0;
+            const limit = histTotal / historyMonths;
+            paretoCats.push({ cat, val, limit });
+            paretoSum += val;
+            if(paretoTotalCurrent > 0 && (paretoSum / paretoTotalCurrent) >= 0.8) break;
+        }
 
         return {
-            metrics: { realBalance: balBrad+balSant, openInvoice: invoiceTotal, predictedIncome: avgIncome, fixedCost: avgFixed, balBrad, balSant, disposableRate, pareto: { topCats: paretoCats, totalPareto: paretoSum, totalExp: paretoTotal }, heatmap: dailyExpenses, weeklyPace: weeklyStats },
-            categories: Object.entries(paretoCategories).map(([k, v]) => ({ k, v, c: AppParams.colors.categories[k] || 'bg-gray-400' })).sort((a, b) => b.v - a.v)
+            metrics: {
+                realBalance: balBrad+balSant,
+                openInvoice: invoiceTotal,
+                predictedIncome: avgIncome,
+                fixedCost: avgFixed,
+                balBrad,
+                balSant,
+                disposableRate,
+                pareto: { topCats: paretoCats, totalPareto: paretoSum, totalExp: paretoTotalCurrent },
+                heatmap: dailyExpenses
+            },
+            categories: Object.entries(currentPareto).map(([k, v]) => ({ k, v, c: AppParams.colors.categories[k] || 'bg-gray-400' })).sort((a, b) => b.v - a.v)
         };
     },
     getLast12ClosedInvoicesBreakdown() {
