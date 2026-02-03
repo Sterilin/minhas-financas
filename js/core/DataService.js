@@ -398,7 +398,7 @@ const DataService = {
     },
 
     getMonthly(year) { return this.monthlyDataCache[year]; },
-    getLatestPeriod() { const now = new Date(); return { year: now.getFullYear(), month: now.getMonth() }; },
+    getLatestPeriod() { const { m, y } = this.getFiscalPeriod(new Date()); return { year: y, month: m }; },
     getAggregated(year, isMonthly, indices, sourceFilter = 'all') {
         const d = this.getMonthly(year);
         if (!d) return { income: [], expenses: [], balances: [], balancesSantander: [], labels: [] };
@@ -444,7 +444,8 @@ const DataService = {
         return { m, y };
     },
 
-    // --- AUDITORIA DE RECEITA ---
+    // --- AUDITORIA DE RECEITA (DEBUG ONLY) ---
+    // Função mantida para fins de debug e verificação no console.
     auditRevenue(year, month) {
         console.group(`🔎 AUDITORIA DE RECEITA (${AppParams.months.full[month]}/${year})`);
 
@@ -473,7 +474,8 @@ const DataService = {
         console.groupEnd();
     },
 
-    // --- NOVA AUDITORIA DE DESPESAS ---
+    // --- AUDITORIA DE DESPESAS (DEBUG ONLY) ---
+    // Função mantida para fins de debug e verificação no console.
     auditExpenses(year, month) {
         console.group(`🔎 AUDITORIA DE DESPESAS (TOP 10) - (${AppParams.months.full[month]}/${year})`);
 
