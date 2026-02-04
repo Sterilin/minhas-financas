@@ -132,52 +132,7 @@ const Dashboard = {
                  </div>
             </div>
 
-            <div class="mt-6 bg-white p-5 rounded-xl card-shadow dark:bg-gray-800 transition-theme">
-                <div class="flex justify-between items-center mb-4">
-                    <div>
-                        <h4 class="text-sm font-bold text-gray-700 dark:text-gray-200">Ritmo de Gastos (Evolução Semanal)</h4>
-                        <p class="text-[10px] text-gray-400 mt-0.5">Velocidade do consumo no mês atual</p>
-                    </div>
-                    <button onclick="Handlers.switchTab('expenses')" class="text-xs text-blue-600 hover:text-blue-700 font-medium dark:text-blue-400 transition-colors">Ver detalhes</button>
-                </div>
-                <div id="weekly-chart-container" class="w-full h-40 flex items-end justify-between gap-4 px-4 val-privacy">Carregando dados...</div>
-            </div>
         `;
-    },
-
-    renderWeeklyChart(weeklyData) {
-        const container = Utils.DOM.get('weekly-chart-container');
-        if(!container) return;
-
-        const total = weeklyData.reduce((a,b) => a+b, 0);
-        if(total === 0) {
-            container.innerHTML = '<div class="w-full h-full flex items-center justify-center text-gray-400 text-xs">Sem dados neste mês.</div>';
-            return;
-        }
-
-        const max = Math.max(...weeklyData, 1);
-        const labels = ['Semana 1 (1-7)', 'Semana 2 (8-14)', 'Semana 3 (15-21)', 'Semana 4 (22+)'];
-
-        const html = weeklyData.map((val, i) => {
-            const pct = Math.round((val / max) * 100);
-            const displayVal = Utils.formatCurrency(val);
-            const isHigh = (val / total) > 0.3;
-            const color = isHigh ? 'bg-rose-500' : 'bg-blue-500';
-
-            return `
-                <div class="flex-1 flex flex-col items-center group h-full justify-end">
-                    <div class="relative w-full bg-gray-100 dark:bg-gray-700 rounded-t-lg flex items-end h-full overflow-hidden">
-                        <div class="${color} w-full transition-all duration-700 ease-out rounded-t-lg relative group-hover:opacity-90" style="height: ${pct}%">
-                            <span class="absolute -top-6 left-1/2 -translate-x-1/2 text-[10px] font-bold text-gray-600 dark:text-gray-300 opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap bg-white dark:bg-gray-800 px-1 rounded shadow">${displayVal}</span>
-                        </div>
-                    </div>
-                    <div class="mt-2 text-[10px] font-medium text-gray-500 text-center uppercase tracking-wide">${labels[i]}</div>
-                    <div class="text-xs font-bold text-gray-800 dark:text-gray-200 mt-0.5">${displayVal}</div>
-                </div>
-            `;
-        }).join('');
-
-        container.innerHTML = html;
     },
 
     render() {
@@ -219,43 +174,66 @@ const Dashboard = {
                 const count = pData.topCats.length;
                 const listHTML = pData.topCats.map(c => {
                     const colorClass = UI.getCategoryColor(c.cat);
-                    const catPct = ((c.val / pData.totalExp) * 100).toFixed(1);
+                    const isOverLimit = c.val > c.limit;
+                    const statusColor = isOverLimit ? 'bg-red-500' : 'bg-emerald-500';
+                    const diff = c.val - c.limit;
+                    const limitStr = Utils.formatCurrency(c.limit);
+
+                    const max = Math.max(c.val, c.limit);
+                    const valPct = max > 0 ? (c.val / max) * 100 : 0;
+                    const limitPct = max > 0 ? (c.limit / max) * 100 : 0;
+
                     return `<div class="mb-3 last:mb-0">
                             <div class="flex justify-between items-end mb-1">
                                 <span class="text-xs font-medium text-gray-600 dark:text-gray-300 flex items-center gap-1.5"><span class="w-2 h-2 rounded-full ${colorClass}"></span> ${c.cat}</span>
-                                <span class="text-xs font-bold text-gray-800 dark:text-white">${Utils.formatCurrency(c.val)} <span class="text-[9px] font-normal text-gray-400 ml-0.5">(${catPct}%)</span></span>
+                                <div class="text-right">
+                                    <span class="text-xs font-bold text-gray-800 dark:text-white">${Utils.formatCurrency(c.val)}</span>
+                                    <span class="text-[9px] block ${isOverLimit ? 'text-red-500' : 'text-emerald-500'} font-medium">Meta: ${limitStr}</span>
+                                </div>
                             </div>
-                            <div class="w-full bg-gray-100 dark:bg-gray-700 rounded-full h-1.5">
-                                <div class="${colorClass} h-1.5 rounded-full" style="width: ${catPct}%"></div>
+                            <div class="w-full bg-gray-100 dark:bg-gray-700 rounded-full h-1.5 relative">
+                                <div class="absolute top-0 bottom-0 w-0.5 bg-gray-400 dark:bg-gray-500 z-10" style="left: ${limitPct}%"></div>
+                                <div class="${statusColor} h-1.5 rounded-full transition-all duration-500" style="width: ${valPct}%"></div>
                             </div>
                         </div>`;
                 }).join('');
 
                 paretoEl.innerHTML = `
                     <div class="mb-4 flex items-center justify-between border-b border-gray-100 dark:border-gray-700 pb-3">
-                        <div><span class="text-2xl font-bold text-gray-800 dark:text-white leading-none">${count}</span><span class="text-xs text-gray-500 dark:text-gray-400 block mt-1">Categorias Principais</span></div>
+                        <div><span class="text-2xl font-bold text-gray-800 dark:text-white leading-none">${count}</span><span class="text-xs text-gray-500 dark:text-gray-400 block mt-1">Categorias (Top)</span></div>
                         <div class="text-right"><span class="text-lg font-bold text-indigo-600 dark:text-indigo-400 leading-none">${pct}%</span><span class="text-xs text-gray-500 dark:text-gray-400 block mt-1">do Total de Gastos</span></div>
                     </div>
-                    <div class="flex flex-col overflow-y-auto max-h-[180px] pr-1 custom-scrollbar">${listHTML}</div>
-                    <div class="mt-3 text-[10px] text-center text-gray-400 italic border-t border-gray-50 dark:border-gray-700 pt-2">Foco nestas categorias para maior impacto.</div>`;
+                    <div class="flex flex-col overflow-y-auto max-h-[220px] pr-1 custom-scrollbar">${listHTML}</div>
+                    <div class="mt-3 text-[10px] flex items-center justify-center gap-4 text-gray-400 border-t border-gray-50 dark:border-gray-700 pt-2">
+                        <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-emerald-500"></span> Abaixo da Média</span>
+                        <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-red-500"></span> Acima da Média</span>
+                    </div>`;
             }
         }
 
         const hData = stats.metrics.heatmap;
         const heatEl = Utils.DOM.get('heatmap-container');
         if (heatEl) {
-            const maxVal = Math.max(...hData, 1);
-            heatEl.innerHTML = hData.map((val, i) => {
+            const maxVal = hData.reduce((m, d) => Math.max(m, d.val), 1);
+
+            heatEl.innerHTML = hData.map((d, i) => {
                 const day = i + 1;
-                const intensity = val === 0 ? 0 : Math.max(0.1, val / maxVal);
-                const bg = val === 0 ? 'bg-gray-100 dark:bg-gray-700 text-gray-400' : 'bg-rose-500 dark:bg-rose-600 text-white';
-                const style = val > 0 ? `opacity: ${0.2 + (intensity * 0.8)}` : '';
-                const title = `Dia ${day}: ${Utils.formatCurrency(val)}`;
-                return `<div class="${bg} rounded-sm aspect-square flex items-center justify-center text-[8px] hover:scale-125 transition-transform cursor-default font-medium" style="${style}" title="${title}">${day}</div>`;
+                const hasData = d.val > 0;
+
+                let bgClass = 'bg-gray-100 dark:bg-gray-700 text-gray-400';
+                let style = '';
+
+                if (hasData) {
+                    bgClass = `text-white ${UI.getCategoryColor(d.topCat)}`;
+                    const intensity = Math.max(0.4, d.val / maxVal);
+                    style = `opacity: ${intensity}`;
+                }
+
+                const title = `Dia ${day}: ${Utils.formatCurrency(d.val)} (${d.topCat || '-'})`;
+
+                return `<div class="${bgClass} rounded-sm aspect-square flex items-center justify-center text-[8px] hover:scale-125 transition-transform cursor-default font-medium" style="${style}" title="${title}">${day}</div>`;
             }).join('');
         }
-
-        this.renderWeeklyChart(stats.metrics.weeklyPace);
 
         const inflationData = DataService.getLast12ClosedInvoicesBreakdown();
         setTimeout(() => ChartManager.renderInflation(year, inflationData), 0);
