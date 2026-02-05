@@ -152,27 +152,48 @@ const ChartManager = {
         if (AppState.charts.inflation) AppState.charts.inflation.destroy();
         const colors = this.getColors();
 
-        // CORREÇÃO: Mapa expandido para incluir tons 400, 600 e cores faltantes (Purple, Blue-400, etc)
         const tailwindMap = {
-            // Reds/Pinks
-            'bg-rose-500': '#f43f5e', 'bg-red-500': '#ef4444', 'bg-pink-500': '#ec4899',
-            // Oranges/Yellows
-            'bg-orange-400': '#fb923c', 'bg-orange-500': '#f97316', 'bg-amber-500': '#f59e0b', 'bg-amber-600': '#d97706', 'bg-yellow-500': '#eab308',
-            // Greens
-            'bg-emerald-500': '#10b981', 'bg-emerald-600': '#059669', 'bg-green-500': '#22c55e', 'bg-lime-600': '#65a30d', 'bg-teal-500': '#14b8a6',
-            // Blues
-            'bg-blue-400': '#60a5fa', 'bg-blue-500': '#3b82f6', 'bg-sky-500': '#0ea5e9', 'bg-cyan-500': '#06b6d4',
-            // Purples
-            'bg-purple-500': '#a855f7', 'bg-purple-600': '#9333ea', 'bg-violet-500': '#8b5cf6', 'bg-fuchsia-500': '#d946ef', 'bg-indigo-500': '#6366f1',
-            // Grays
-            'bg-gray-400': '#9ca3af', 'bg-slate-500': '#64748b'
+            // Slate Scale
+            'bg-slate-900': '#0f172a',
+            'bg-slate-700': '#334155',
+            'bg-slate-600': '#475569',
+            'bg-slate-500': '#64748b',
+
+            // Blue Scale
+            'bg-blue-800': '#1e40af',
+            'bg-blue-700': '#1d4ed8',
+            'bg-blue-600': '#2563eb',
+            'bg-blue-500': '#3b82f6',
+
+            // Emerald Scale
+            'bg-emerald-700': '#047857',
+            'bg-emerald-600': '#059669',
+            'bg-emerald-500': '#10b981',
+            'bg-emerald-400': '#34d399',
+
+            // Amber Scale
+            'bg-amber-600': '#d97706',
+            'bg-amber-500': '#f59e0b',
+            'bg-amber-400': '#fbbf24',
+            'bg-amber-300': '#fcd34d',
+
+            // Indigo Scale
+            'bg-indigo-600': '#4f46e5',
+            'bg-indigo-500': '#6366f1',
+            'bg-indigo-400': '#818cf8',
+            'bg-indigo-300': '#a5b4fc',
+
+            // Gray Scale & Fallbacks
+            'bg-gray-400': '#9ca3af',
+            'bg-gray-300': '#d1d5db',
+            'default': '#cbd5e1'
         };
 
         const datasets = breakdown.categories.map(cat => {
             const data = breakdown.data.map(monthData => monthData[cat] || 0);
             const tailwindClass = UI.getCategoryColor(cat);
             // Fallback melhorado
-            const hexColor = tailwindMap[tailwindClass] || '#9ca3af';
+            const hexColor = tailwindMap[tailwindClass] || '#cbd5e1';
 
             return { label: cat, data: data, backgroundColor: hexColor, borderRadius: 2 };
         });
