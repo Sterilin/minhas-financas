@@ -144,10 +144,13 @@ const DataService = {
             const val = idx.val > -1 ? this.parseMoney(cols[idx.val]) : 0;
             const bal = idx.bal > -1 ? this.parseMoney(cols[idx.bal]) : 0;
             const desc = (idx.desc > -1 ? cols[idx.desc] : '').replace(/"/g, '');
+            const descLower = desc.toLowerCase();
 
             let cat = 'Outros';
             if(val > 0) cat = 'Receita';
-            else if(desc.toLowerCase().includes('pix')) cat = 'Pix';
+            else if(descLower.includes('pix')) cat = 'Pix';
+
+            const isIgnored = ignorePatterns.some(p => descLower.includes(p));
 
             return {
                 dateStr: date.toISOString(),
@@ -156,7 +159,8 @@ const DataService = {
                 balance: bal,
                 category: cat,
                 source: sourceLabel,
-                type: val >= 0 ? 'income' : 'expense'
+                type: val >= 0 ? 'income' : 'expense',
+                isIgnored
             };
         }).filter(t => t).sort((a,b) => new Date(b.dateStr) - new Date(a.dateStr));
     },
@@ -188,6 +192,7 @@ const DataService = {
             }
             const val = idx.val > -1 ? this.parseMoney(cols[idx.val]) : 0;
             const desc = idx.desc > -1 ? cols[idx.desc].replace(/"/g, '') : 'Santander';
+            const isIgnored = ignorePatterns.some(p => desc.toLowerCase().includes(p));
 
             return {
                 dateStr: date.toISOString(),
@@ -195,7 +200,8 @@ const DataService = {
                 value: val,
                 category: idx.cat > -1 ? cols[idx.cat] : 'Cartão',
                 source: 'santander_card',
-                type: val > 0 ? 'expense' : 'income'
+                type: val > 0 ? 'expense' : 'income',
+                isIgnored
             };
         }).filter(t => t && t.value !== 0).sort((a,b) => new Date(b.dateStr) - new Date(a.dateStr));
     },
@@ -274,7 +280,12 @@ const DataService = {
             if (Date.now() - data.timestamp > TTL) return false;
 
             // Rehydrate Dates from strings
-            const hydrate = (list) => list ? list.map(t => ({ ...t, date: new Date(t.dateStr || t.date) })) : [];
+            const isIgnored = (desc) => AppParams.ignorePatterns.some(p => desc.toLowerCase().includes(p));
+            const hydrate = (list) => list ? list.map(t => ({
+                ...t,
+                date: new Date(t.dateStr || t.date),
+                isIgnored: isIgnored(t.description)
+            })) : [];
 
             this.bradescoTransactions = hydrate(data.bradesco);
             this.santanderAccountTransactions = hydrate(data.santanderAcc);
@@ -332,8 +343,6 @@ const DataService = {
             };
         });
 
-        const isIgnored = (desc) => AppParams.ignorePatterns.some(p => desc.toLowerCase().includes(p));
-
         const balances = { bradesco: {}, santander: {} };
 
         const indexTransaction = (t) => {
@@ -352,7 +361,7 @@ const DataService = {
 
                 const { m, y } = indexTransaction(t);
                 if (this.monthlyDataCache[y]) {
-                    if (!isIgnored(t.description)) {
+                    if (!t.isIgnored) {
                         const val = Math.abs(t.value);
                         if (t.value > 0) {
                             this.monthlyDataCache[y].income[m] += val;
@@ -373,7 +382,7 @@ const DataService = {
             this.santanderCardTransactions.forEach(t => {
                 const { m, y } = indexTransaction(t);
                 if (this.monthlyDataCache[y]) {
-                    if (t.type === 'expense' && !isIgnored(t.description)) {
+                    if (t.type === 'expense' && !t.isIgnored) {
                         const val = Math.abs(t.value);
                         this.monthlyDataCache[y].expenses[m] += val;
                         this.monthlyDataCache[y].card.expenses[m] += val;
@@ -467,7 +476,7 @@ const DataService = {
         const processStats = (list) => {
             if(!list) return;
             list.forEach(t => {
-                if(t.type !== 'expense' || AppParams.ignorePatterns.some(p => t.description.toLowerCase().includes(p))) return;
+                if(t.type !== 'expense' || t.isIgnored) return;
                 const val = Math.abs(t.value);
                 const cat = t.category || 'Outros';
 
@@ -590,7 +599,7 @@ const DataService = {
         // 2. Single pass through transactions (O(N))
         if(this.santanderCardTransactions) {
             this.santanderCardTransactions.forEach(t => {
-                if(t.type === 'expense' && !AppParams.ignorePatterns.some(p => t.description.toLowerCase().includes(p))) {
+                if(t.type === 'expense' && !t.isIgnored) {
                     const { m, y } = this.getFiscalPeriod(t.date);
                     const key = `${y}-${m}`;
 
