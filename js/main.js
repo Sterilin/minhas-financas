@@ -17,7 +17,6 @@ window.Handlers = {
 };
 
 document.addEventListener('DOMContentLoaded', () => {
-    console.log('DOMContentLoaded');
     if (window.Utils && window.Utils.DOM) {
         window.Utils.DOM.updateText('current-date', new Date().toLocaleDateString('pt-BR'));
     }
@@ -32,7 +31,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if(window.DataService) window.DataService.init();
 
-        console.log('Switching to dashboard...');
         if(window.UI) window.UI.switchTab('dashboard');
     } catch (e) {
         console.error('Error in initialization:', e);

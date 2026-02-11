@@ -11,7 +11,6 @@ const DataService = {
     notify() { this.listeners.forEach(fn => fn(this)); },
 
     async init() {
-        console.log("🚀 DataService: Iniciando...");
         Utils.DOM.updateText('current-month-badge', 'Sincronizando...');
 
         if (!AppParams || !AppParams.urls) return false;
@@ -21,17 +20,14 @@ const DataService = {
             this.worker = new Worker('js/workers/parser.worker.js');
             this.worker.onmessage = (e) => this.handleWorkerMessage(e);
             this.worker.onerror = (e) => {
-                console.warn("⚠️ Worker Error (CORS/Security?): Fallback to main thread.", e);
                 this.worker = null;
             };
         } catch (e) {
-            console.warn("⚠️ Could not create Worker (likely file:// protocol). Using main thread fallback.");
             this.worker = null;
         }
 
         // Check Cache first (Optimization 1.2)
         if (this.loadFromCache()) {
-            console.log("📦 Loaded from Cache");
             this.buildCache();
             this.notify();
             // Background update
