@@ -8,6 +8,8 @@ const Utils = {
         }
         return parseFloat(s) || 0;
     },
+    sortDateStrDesc: (a, b) => b.dateStr > a.dateStr ? 1 : (b.dateStr < a.dateStr ? -1 : 0),
+    sortDateStrAsc: (a, b) => a.dateStr > b.dateStr ? 1 : (a.dateStr < b.dateStr ? -1 : 0),
     DOM: {
         el: (id) => document.getElementById(id),
         cache: {},

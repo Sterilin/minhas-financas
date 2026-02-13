@@ -64,10 +64,13 @@ function parseBankStatement(text, sourceLabel, ignorePatterns = []) {
         const val = idx.val > -1 ? parseMoney(cols[idx.val]) : 0;
         const bal = idx.bal > -1 ? parseMoney(cols[idx.bal]) : 0;
         const desc = (idx.desc > -1 ? cols[idx.desc] : '').replace(/"/g, '');
+        const descLower = desc.toLowerCase();
 
         let cat = 'Outros';
         if(val > 0) cat = 'Receita';
-        else if(desc.toLowerCase().includes('pix')) cat = 'Pix';
+        else if(descLower.includes('pix')) cat = 'Pix';
+
+        const isIgnored = ignorePatterns.some(p => descLower.includes(p));
 
         return {
             dateStr: date.toISOString(), // Send as string, rehydrate on main thread
@@ -76,9 +79,10 @@ function parseBankStatement(text, sourceLabel, ignorePatterns = []) {
             balance: bal,
             category: cat,
             source: sourceLabel,
-            type: val >= 0 ? 'income' : 'expense'
+            type: val >= 0 ? 'income' : 'expense',
+            isIgnored
         };
-    }).filter(t => t).sort((a,b) => new Date(b.dateStr) - new Date(a.dateStr));
+    }).filter(t => t).sort((a,b) => b.dateStr > a.dateStr ? 1 : (b.dateStr < a.dateStr ? -1 : 0));
 }
 
 function parseSantanderCardTSV(text, ignorePatterns = []) {
@@ -108,6 +112,7 @@ function parseSantanderCardTSV(text, ignorePatterns = []) {
         }
         const val = idx.val > -1 ? parseMoney(cols[idx.val]) : 0;
         const desc = idx.desc > -1 ? cols[idx.desc].replace(/"/g, '') : 'Santander';
+        const isIgnored = ignorePatterns.some(p => desc.toLowerCase().includes(p));
 
         return {
             dateStr: date.toISOString(),
@@ -115,9 +120,10 @@ function parseSantanderCardTSV(text, ignorePatterns = []) {
             value: val,
             category: idx.cat > -1 ? cols[idx.cat] : 'Cartão',
             source: 'santander_card',
-            type: val > 0 ? 'expense' : 'income'
+            type: val > 0 ? 'expense' : 'income',
+            isIgnored
         };
-    }).filter(t => t && t.value !== 0).sort((a,b) => new Date(b.dateStr) - new Date(a.dateStr));
+    }).filter(t => t && t.value !== 0).sort((a,b) => b.dateStr > a.dateStr ? 1 : (b.dateStr < a.dateStr ? -1 : 0));
 }
 
 function parseGoalsTSV(text, monthsShort) {
