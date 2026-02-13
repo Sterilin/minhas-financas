@@ -189,11 +189,35 @@ const ChartManager = {
         if (AppState.charts.inflation) AppState.charts.inflation.destroy();
         const colors = this.getColors();
 
+        const tailwindMap = {
+            // Earth Tone Palette
+            'bg-[#0b0f08]': '#0b0f08', // Void
+            'bg-[#283f23]': '#283f23', // Deep Forest
+            'bg-[#397234]': '#397234', // Medium Fern
+            'bg-[#acbd5e]': '#acbd5e', // Lime/Moss
+            'bg-[#b78449]': '#b78449', // Gold/Clay
+            'bg-[#3f2617]': '#3f2617', // Earth/Soil
+            'bg-[#6b7280]': '#6b7280', // Neutral Gray
+
+            // Gradients/Shades
+            'bg-[#1a261b]': '#1a261b',
+            'bg-[#31592b]': '#31592b',
+            'bg-[#4a8544]': '#4a8544',
+            'bg-[#8a9d4b]': '#8a9d4b', // Darker Lime
+            'bg-[#966835]': '#966835', // Darker Gold
+            'bg-[#d4a365]': '#d4a365', // Lighter Gold
+            'bg-[#2a190f]': '#2a190f', // Darkest Soil
+            'bg-[#5c3a26]': '#5c3a26', // Lighter Soil
+
+            // Fallback
+            'default': '#cbd5e1'
+        };
+
         const datasets = breakdown.categories.map(cat => {
             const data = breakdown.data.map(monthData => monthData[cat] || 0);
             const tailwindClass = UI.getCategoryColor(cat);
             // Fallback melhorado
-            const hexColor = TAILWIND_COLOR_MAP[tailwindClass] || TAILWIND_COLOR_MAP['default'] || '#cbd5e1';
+            const hexColor = tailwindMap[tailwindClass] || '#cbd5e1';
 
             return { label: cat, data: data, backgroundColor: hexColor, borderRadius: 2 };
         });
