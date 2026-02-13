@@ -444,81 +444,6 @@ const DataService = {
         return { m, y };
     },
 
-    // --- AUDITORIA DE RECEITA (DEBUG ONLY) ---
-    // Função mantida para fins de debug e verificação no console.
-    auditRevenue(year, month) {
-        console.group(`🔎 AUDITORIA DE RECEITA (${AppParams.months.full[month]}/${year})`);
-
-        const d = this.getMonthly(year);
-        const incomeItems = [];
-
-        if (d && d.transactions && d.transactions[month]) {
-            d.transactions[month].forEach(t => {
-                // Filter out Credit Card (only Account transactions)
-                if (t.source !== 'santander_card') {
-                     if (t.value > 0 && !AppParams.ignorePatterns.some(p => t.description.toLowerCase().includes(p))) {
-                        incomeItems.push(t);
-                    }
-                }
-            });
-        }
-
-        incomeItems.sort((a,b) => b.value - a.value);
-        console.log(`Total Receita Calculado: R$ ${incomeItems.reduce((a,b)=>a+b.value,0).toFixed(2)}`);
-        console.table(incomeItems.map(t => ({
-            Data: t.date.toLocaleDateString(),
-            Valor: t.value.toFixed(2),
-            Descricao: t.description,
-            Banco: t.source
-        })));
-        console.groupEnd();
-    },
-
-    // --- AUDITORIA DE DESPESAS (DEBUG ONLY) ---
-    // Função mantida para fins de debug e verificação no console.
-    auditExpenses(year, month) {
-        console.group(`🔎 AUDITORIA DE DESPESAS (TOP 10) - (${AppParams.months.full[month]}/${year})`);
-
-        const d = this.getMonthly(year);
-        const expenseItems = [];
-
-        if (d && d.transactions && d.transactions[month]) {
-            d.transactions[month].forEach(t => {
-                // Filtra ignorados
-                if (!AppParams.ignorePatterns.some(p => t.description.toLowerCase().includes(p))) {
-                    let val = 0;
-
-                    // Cartão: Despesa se for 'expense' (positivo no parser)
-                    if (t.source === 'santander_card') {
-                        if (t.type === 'expense') val = t.value;
-                    }
-                    // Contas: Despesa se valor < 0
-                    else {
-                        if (t.value < 0) val = Math.abs(t.value);
-                    }
-
-                    if (val > 0) {
-                        expenseItems.push({
-                            Data: t.date.toLocaleDateString(),
-                            Valor: val,
-                            Descricao: t.description,
-                            Fonte: t.source === 'santander_card' ? 'Cartão' : (t.source === 'bradesco' ? 'Bradesco' : 'Conta Santander')
-                        });
-                    }
-                }
-            });
-        }
-
-        // Ordena maior para menor
-        expenseItems.sort((a,b) => b.Valor - a.Valor);
-        const top10 = expenseItems.slice(0, 10);
-
-        console.log(`Total Despesas Mês: R$ ${expenseItems.reduce((a,b)=>a+b.Valor,0).toFixed(2)}`);
-        console.table(top10.map(t => ({...t, Valor: t.Valor.toFixed(2)})));
-        console.log("💡 Use o Config.js para ignorar pagamentos de fatura ou transferências que apareçam aqui.");
-        console.groupEnd();
-    },
-
     getDashboardStats(year, month) {
         let balBrad=0, balSant=0;
         if(this.bradescoTransactions.length) balBrad = this.bradescoTransactions[0].balance;
@@ -597,10 +522,6 @@ const DataService = {
                 sumFixed += mFixed;
             }
         }
-
-        // --- CHAMA AS AUDITORIAS ---
-        this.auditRevenue(year, month);
-        this.auditExpenses(year, month); // Nova chamada
 
         const avgIncome = sumIncome/3; const avgFixed = sumFixed/3; const avgProjBal = sumProjBalance/3;
         const disposableRate = avgProjBal !== 0 ? ((avgProjBal - avgFixed)/avgProjBal)*100 : 0;
