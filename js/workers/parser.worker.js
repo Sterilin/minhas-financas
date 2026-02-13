@@ -82,7 +82,7 @@ function parseBankStatement(text, sourceLabel, ignorePatterns = []) {
             type: val >= 0 ? 'income' : 'expense',
             isIgnored
         };
-    }).filter(t => t).sort((a,b) => b.dateStr.localeCompare(a.dateStr));
+    }).filter(t => t).sort((a,b) => b.dateStr > a.dateStr ? 1 : (b.dateStr < a.dateStr ? -1 : 0));
 }
 
 function parseSantanderCardTSV(text, ignorePatterns = []) {
@@ -123,7 +123,7 @@ function parseSantanderCardTSV(text, ignorePatterns = []) {
             type: val > 0 ? 'expense' : 'income',
             isIgnored
         };
-    }).filter(t => t && t.value !== 0).sort((a,b) => b.dateStr.localeCompare(a.dateStr));
+    }).filter(t => t && t.value !== 0).sort((a,b) => b.dateStr > a.dateStr ? 1 : (b.dateStr < a.dateStr ? -1 : 0));
 }
 
 function parseGoalsTSV(text, monthsShort) {
