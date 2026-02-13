@@ -158,7 +158,7 @@ const DataService = {
                 type: val >= 0 ? 'income' : 'expense',
                 isIgnored
             };
-        }).filter(t => t).sort((a,b) => new Date(b.dateStr) - new Date(a.dateStr));
+    }).filter(t => t).sort((a,b) => b.dateStr.localeCompare(a.dateStr));
     },
 
     parseSantanderCardTSV(text, ignorePatterns = []) {
@@ -199,7 +199,7 @@ const DataService = {
                 type: val > 0 ? 'expense' : 'income',
                 isIgnored
             };
-        }).filter(t => t && t.value !== 0).sort((a,b) => new Date(b.dateStr) - new Date(a.dateStr));
+    }).filter(t => t && t.value !== 0).sort((a,b) => b.dateStr.localeCompare(a.dateStr));
     },
 
     parseGoalsTSV(text, monthsShort) {
