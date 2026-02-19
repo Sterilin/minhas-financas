@@ -471,8 +471,12 @@ const DataService = {
 
         const processStats = (list) => {
             if(!list) return;
-            list.forEach(t => {
-                if(t.type !== 'expense' || t.isIgnored) return;
+            for (const t of list) {
+                // Optimization: Break early if transaction is older than the history pattern start.
+                // Works because transaction lists are sorted descending (newest first).
+                if (t.date < patternStartDate) break;
+                if (t.type !== 'expense' || t.isIgnored) continue;
+
                 const val = Math.abs(t.value);
                 const cat = t.category || 'Outros';
 
@@ -502,7 +506,7 @@ const DataService = {
                         historyPareto[cat] = (historyPareto[cat] || 0) + val;
                     }
                 }
-            });
+            }
         };
         processStats(this.santanderCardTransactions);
         processStats(this.bradescoTransactions);
