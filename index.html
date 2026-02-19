@@ -7,14 +7,43 @@
 
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
-        tailwind.config = { darkMode: 'class' }
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        gray: {
+                            50: '#F8F5E9',
+                            100: '#F2EFE3',
+                            200: '#E5E0D0',
+                            300: '#D0C8B8',
+                            400: '#A09888',
+                            500: '#807870',
+                            600: '#605850',
+                            700: '#504840',
+                            800: '#3E3A35',
+                            900: '#2B2824'
+                        },
+                        blue: { 500: '#D9A520', 600: '#C2921A', 800: '#75560A' },
+                        indigo: { 500: '#D9A520', 600: '#C2921A', 800: '#75560A' },
+                        purple: { 500: '#D9A520', 600: '#C2921A', 800: '#75560A' },
+                        emerald: { 500: '#7D945D', 600: '#6A7F4D' },
+                        green: { 500: '#7D945D', 600: '#6A7F4D' },
+                        rose: { 500: '#BA5C45', 600: '#A64E3A' },
+                        red: { 500: '#BA5C45', 600: '#A64E3A' },
+                        orange: { 500: '#BA5C45', 600: '#A64E3A' },
+                        white: '#FFFCF5'
+                    }
+                }
+            }
+        }
     </script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
     <link rel="stylesheet" href="css/styles.css">
 </head>
-<body class="bg-gray-100 text-gray-800 h-screen flex flex-col dark:bg-gray-900 dark:text-gray-100 transition-theme" id="app-body">
+<body class="bg-gray-100 text-gray-800 h-screen flex flex-col dark:bg-gray-900 dark:text-gray-100 transition-theme texture-dream" id="app-body">
 
     <header class="bg-white shadow-sm z-10 dark:bg-gray-800 dark:border-gray-700 transition-theme flex-shrink-0">
         <div class="max-w-4xl mx-auto px-4 py-4 flex justify-between items-center">
