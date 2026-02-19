@@ -80,14 +80,12 @@ const UI = {
 
             if (btnName === activeTab) {
                 // Ativo
-                btn.classList.remove('text-gray-500', 'hover:text-gray-700', 'tab-inactive');
-                btn.classList.add('text-blue-600', 'dark:text-blue-400', 'tab-active');
-                btn.style.borderBottomColor = 'currentColor';
+                btn.classList.remove('tab-inactive');
+                btn.classList.add('tab-active');
             } else {
                 // Inativo
-                btn.classList.remove('text-blue-600', 'dark:text-blue-400', 'tab-active');
-                btn.classList.add('text-gray-500', 'hover:text-gray-700', 'tab-inactive');
-                btn.style.borderBottomColor = 'transparent';
+                btn.classList.remove('tab-active');
+                btn.classList.add('tab-inactive');
             }
         });
     }
