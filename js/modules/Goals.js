@@ -1,4 +1,8 @@
-const Goals = {
+import { AppParams } from '../core/Config.js';
+import { DataService } from '../core/DataService.js';
+import { Utils } from '../core/Utils.js';
+
+export const Goals = {
     init() {
         this.render();
         DataService.subscribe(() => this.render());
@@ -350,4 +354,3 @@ const Goals = {
         }
     }
 };
-window.Goals = Goals;
