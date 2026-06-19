@@ -1,4 +1,4 @@
-const AppState = {
+export const AppState = {
     isDark: false,
     isPrivacy: false,
     isAutoSync: false,
@@ -6,4 +6,3 @@ const AppState = {
     reportSelections: { '2024': Array.from({length:12}, (_,i)=>i), '2025': Array.from({length:12}, (_,i)=>i) },
     charts: { report: null, projection: null, comparison: null, inflation: null, yoy: null }
 };
-window.AppState = AppState;

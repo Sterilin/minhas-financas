@@ -1,4 +1,9 @@
-const Tables = {
+import { AppParams } from '../core/Config.js';
+import { DataService } from '../core/DataService.js';
+import { UI } from '../core/UI.js';
+import { Utils } from '../core/Utils.js';
+
+export const Tables = {
     currentSubTab: 'audit', // Aba padrão
 
     init() {
@@ -181,4 +186,3 @@ const Tables = {
         }).join('');
     }
 };
-window.Tables = Tables;

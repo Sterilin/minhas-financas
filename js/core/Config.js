@@ -1,4 +1,4 @@
-const AppParams = {
+export const AppParams = {
     months: {
         full: ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'],
         short: ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez']
@@ -66,4 +66,3 @@ const AppParams = {
         goalsEdit: 'https://docs.google.com/spreadsheets/d/1zlEPm91ldWR1RbY87TWctJIaARV6a9UpMLCNTBxQC_g/edit?usp=sharing'
     }
 };
-window.AppParams = AppParams;

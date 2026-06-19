@@ -1,3 +1,8 @@
+import { AppParams } from './Config.js';
+import { AppState } from './AppState.js';
+import { Utils } from './Utils.js';
+import { UI } from './UI.js';
+
 const TAILWIND_COLOR_MAP = {
     // Slate Scale
     'bg-slate-900': '#0f172a',
@@ -35,7 +40,7 @@ const TAILWIND_COLOR_MAP = {
     'default': '#cbd5e1'
 };
 
-const ChartManager = {
+export const ChartManager = {
     resizeTimeout: null, // Optimization 3.1: Debounce timer
 
     getColors() {
@@ -250,4 +255,3 @@ const ChartManager = {
         });
     }
 };
-window.ChartManager = ChartManager;
