@@ -5,8 +5,6 @@ import { Utils } from '../core/Utils.js';
 
 export const Tables = {
     currentSubTab: 'audit', // Aba padrão
-    bankTablePage: 1,
-    bankTableSource: '',
 
     init() {
         // Tenta renderizar assim que inicia
@@ -28,7 +26,6 @@ export const Tables = {
 
     switchSubTab(tabName) {
         this.currentSubTab = tabName;
-        this.bankTablePage = 1;
 
         // 1. Atualiza visual dos botões
         const buttons = ['audit', 'bradesco', 'santander-acc', 'santander-card'];
@@ -115,19 +112,11 @@ export const Tables = {
         incomeList.sort((a,b) => b.absValue - a.absValue);
         expenseList.sort((a,b) => b.absValue - a.absValue);
 
-        const renderRowsFragment = (list, colorClass) => {
-            const frag = document.createDocumentFragment();
-            if (list.length === 0) {
-                const tr = document.createElement('tr');
-                tr.innerHTML = '<td class="p-4 text-xs text-gray-400 text-center">Nenhum registro considerado neste período.</td>';
-                frag.appendChild(tr);
-                return frag;
-            }
+        const renderRows = (list, colorClass) => {
+            if (list.length === 0) return '<tr><td class="p-4 text-xs text-gray-400 text-center">Nenhum registro considerado neste período.</td></tr>';
 
-            list.forEach(t => {
-                const tr = document.createElement('tr');
-                tr.className = "border-b border-gray-50 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors";
-                tr.innerHTML = `
+            return list.map(t => `
+                <tr class="border-b border-gray-50 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
                     <td class="px-4 py-2">
                         <div class="flex justify-between items-start gap-2">
                             <div class="overflow-hidden">
@@ -137,16 +126,12 @@ export const Tables = {
                             <span class="text-xs font-bold ${colorClass} whitespace-nowrap val-privacy">${Utils.formatCurrency(t.absValue)}</span>
                         </div>
                     </td>
-                `;
-                frag.appendChild(tr);
-            });
-            return frag;
+                </tr>
+            `).join('');
         };
 
-        incomeBody.innerHTML = '';
-        expenseBody.innerHTML = '';
-        incomeBody.appendChild(renderRowsFragment(incomeList, 'text-emerald-600 dark:text-emerald-400'));
-        expenseBody.appendChild(renderRowsFragment(expenseList, 'text-rose-600 dark:text-rose-400'));
+        incomeBody.innerHTML = renderRows(incomeList, 'text-emerald-600 dark:text-emerald-400');
+        expenseBody.innerHTML = renderRows(expenseList, 'text-rose-600 dark:text-rose-400');
 
         const totalInc = incomeList.reduce((acc, t) => acc + t.absValue, 0);
         const totalExp = expenseList.reduce((acc, t) => acc + t.absValue, 0);
@@ -155,16 +140,9 @@ export const Tables = {
         Utils.DOM.updateText('audit-expense-total', Utils.formatCurrency(totalExp));
     },
 
-    loadMoreBankTable() {
-        this.bankTablePage++;
-        this.renderBankTable(this.bankTableSource, true);
-    },
-
-    renderBankTable(source, append = false) {
+    renderBankTable(source) {
         const tbody = document.getElementById('bank-table-body');
         if (!tbody) return;
-
-        this.bankTableSource = source;
 
         let data = [];
         if (source === 'bradesco') data = DataService.bradescoTransactions || [];
@@ -176,23 +154,10 @@ export const Tables = {
             return;
         }
 
-        if (!append) {
-            tbody.innerHTML = '';
-            this.bankTablePage = 1;
-        } else {
-            // Remover botão de carregar mais anterior se existir
-            const loadMoreRow = document.getElementById('load-more-row');
-            if (loadMoreRow) loadMoreRow.remove();
-        }
+        // Limita renderização inicial para performance
+        const displayData = data.slice(0, 100);
 
-        const pageSize = 50;
-        const startIndex = (this.bankTablePage - 1) * pageSize;
-        const endIndex = startIndex + pageSize;
-        const displayData = data.slice(startIndex, endIndex);
-
-        const frag = document.createDocumentFragment();
-
-        displayData.forEach(t => {
+        tbody.innerHTML = displayData.map(t => {
             let valClass = 'text-gray-800 dark:text-gray-200';
             let displayVal = t.value;
 
@@ -208,31 +173,16 @@ export const Tables = {
                 else valClass = 'text-emerald-600 dark:text-emerald-400';
             }
 
-            const tr = document.createElement('tr');
-            tr.className = "bg-white border-b hover:bg-gray-50 dark:bg-gray-800 dark:border-gray-700 dark:hover:bg-gray-700 transition-colors";
-            tr.innerHTML = `
-                <td class="px-4 py-3 text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">${t.date.toLocaleDateString()}</td>
-                <td class="px-4 py-3 text-xs font-medium text-gray-700 dark:text-gray-200 truncate max-w-[200px]" title="${t.description}">${t.description}</td>
-                <td class="px-4 py-3 text-xs text-gray-500 dark:text-gray-400">
-                    <span class="px-2 py-0.5 rounded-full ${UI.getCategoryColor(t.category)} text-white text-[10px] shadow-sm">${t.category || 'Geral'}</span>
-                </td>
-                <td class="px-4 py-3 text-xs font-bold text-right ${valClass} val-privacy">${Utils.formatCurrency(displayVal)}</td>
+            return `
+                <tr class="bg-white border-b hover:bg-gray-50 dark:bg-gray-800 dark:border-gray-700 dark:hover:bg-gray-700 transition-colors">
+                    <td class="px-4 py-3 text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">${t.date.toLocaleDateString()}</td>
+                    <td class="px-4 py-3 text-xs font-medium text-gray-700 dark:text-gray-200 truncate max-w-[200px]" title="${t.description}">${t.description}</td>
+                    <td class="px-4 py-3 text-xs text-gray-500 dark:text-gray-400">
+                        <span class="px-2 py-0.5 rounded-full ${UI.getCategoryColor(t.category)} text-white text-[10px] shadow-sm">${t.category || 'Geral'}</span>
+                    </td>
+                    <td class="px-4 py-3 text-xs font-bold text-right ${valClass} val-privacy">${Utils.formatCurrency(displayVal)}</td>
+                </tr>
             `;
-            frag.appendChild(tr);
-        });
-
-        // Add "Carregar Mais" if there is more data
-        if (endIndex < data.length) {
-            const loadMoreTr = document.createElement('tr');
-            loadMoreTr.id = 'load-more-row';
-            loadMoreTr.innerHTML = `
-                <td colspan="4" class="px-4 py-4 text-center">
-                    <button onclick="window.Tables.loadMoreBankTable()" class="px-4 py-2 bg-gray-100 text-gray-600 text-xs font-medium rounded hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600 transition-colors">Carregar Mais</button>
-                </td>
-            `;
-            frag.appendChild(loadMoreTr);
-        }
-
-        tbody.appendChild(frag);
+        }).join('');
     }
 };
