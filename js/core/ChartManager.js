@@ -42,6 +42,22 @@ const TAILWIND_COLOR_MAP = {
 
 export const ChartManager = {
     resizeTimeout: null, // Optimization 3.1: Debounce timer
+    chartLoadingPromise: null,
+
+    loadChartLibrary() {
+        if (window.Chart) return Promise.resolve();
+        if (this.chartLoadingPromise) return this.chartLoadingPromise;
+
+        this.chartLoadingPromise = new Promise((resolve, reject) => {
+            const script = document.createElement('script');
+            script.src = "https://cdn.jsdelivr.net/npm/chart.js";
+            script.onload = () => resolve();
+            script.onerror = () => reject(new Error("Failed to load Chart.js"));
+            document.head.appendChild(script);
+        });
+
+        return this.chartLoadingPromise;
+    },
 
     getColors() {
         return {
@@ -104,7 +120,8 @@ export const ChartManager = {
     },
 
     // Renderizadores Específicos (chamados pelos Módulos)
-    renderReport(data) {
+    async renderReport(data) {
+        await this.loadChartLibrary();
         const ctx = Utils.DOM.get('financeChart').getContext('2d');
         if (AppState.charts.report) AppState.charts.report.destroy();
         const colors = this.getColors();
@@ -132,7 +149,8 @@ export const ChartManager = {
         });
     },
 
-    renderProjection(data) {
+    async renderProjection(data) {
+        await this.loadChartLibrary();
         const ctx = Utils.DOM.get('projectionChart').getContext('2d');
         if(AppState.charts.projection) AppState.charts.projection.destroy();
         const colors = this.getColors();
@@ -164,7 +182,8 @@ export const ChartManager = {
         });
     },
 
-    renderCompare(labels, dataA, dataB) {
+    async renderCompare(labels, dataA, dataB) {
+            await this.loadChartLibrary();
             const ctx = Utils.DOM.get('compareChart1').getContext('2d');
             if(AppState.charts.comparison) AppState.charts.comparison.destroy();
             const colors = this.getColors();
@@ -189,7 +208,8 @@ export const ChartManager = {
             });
     },
 
-    renderInflation(year, breakdown) {
+    async renderInflation(year, breakdown) {
+        await this.loadChartLibrary();
         const ctx = Utils.DOM.get('inflationChart').getContext('2d');
         if (AppState.charts.inflation) AppState.charts.inflation.destroy();
         const colors = this.getColors();
