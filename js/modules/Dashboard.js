@@ -1,4 +1,10 @@
-const Dashboard = {
+import { AppParams } from '../core/Config.js';
+import { ChartManager } from '../core/ChartManager.js';
+import { DataService } from '../core/DataService.js';
+import { UI } from '../core/UI.js';
+import { Utils } from '../core/Utils.js';
+
+export const Dashboard = {
     init() {
         this.render();
         DataService.subscribe(() => this.render());
@@ -155,4 +161,3 @@ const Dashboard = {
         setTimeout(() => ChartManager.renderInflation(year, inflationData), 0);
     }
 };
-window.Dashboard = Dashboard;
