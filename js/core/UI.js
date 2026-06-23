@@ -42,6 +42,7 @@ export const UI = {
         return AppParams.colors.categories[category] || 'bg-gray-400';
     },
 
+
     switchTab(tabName) {
         // 1. SEGURANÇA: Verifica se a aba alvo existe no HTML
         const targetId = `view-${tabName}`;
@@ -65,15 +66,26 @@ export const UI = {
         targetSection.classList.remove('hidden');
         targetSection.classList.add('fade-in');
 
-        // 4. Atualiza os botões do menu
+        // 4. Lida com a visibilidade da Sidebar
+        const sidebar = document.getElementById('context-sidebar');
+        if (sidebar) {
+            if (tabName === 'data') {
+                sidebar.classList.remove('hidden');
+                sidebar.classList.add('md:flex'); // Garante layout
+            } else {
+                sidebar.classList.add('hidden');
+                sidebar.classList.remove('md:flex');
+            }
+        }
+
+        // 5. Atualiza os botões do menu
         this.updateNavButtons(tabName);
 
-        // 5. Dispara evento para carregar gráficos/tabelas
+        // 6. Dispara evento para carregar gráficos/tabelas
         document.dispatchEvent(new CustomEvent('tabChanged', { detail: { tab: tabName } }));
 
         if(AppState) AppState.currentTab = tabName;
     },
-
     updateNavButtons(activeTab) {
         this.validTabs.forEach(btnName => {
             const btn = document.getElementById(`btn-${btnName}`);
