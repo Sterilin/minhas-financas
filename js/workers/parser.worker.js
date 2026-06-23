@@ -137,7 +137,9 @@ function parseGoalsTSV(text, monthsShort) {
         total: headers.findIndex(h => h.includes('total') || h.includes('alvo')),
         current: headers.findIndex(h => h.includes('atual') || h.includes('acumulado')),
         param: headers.findIndex(h => h.includes('aporte') || h.includes('mensal') || h.includes('meta')),
-        image: headers.findIndex(h => h.includes('imagem') || h.includes('img'))
+        image: headers.findIndex(h => h.includes('imagem') || h.includes('img')),
+        priority: headers.findIndex(h => h.includes('prioridade')),
+        yieldRate: headers.findIndex(h => h.includes('rendimento') || h.includes('taxa'))
     };
 
     return rows.slice(1).map(row => {
@@ -148,8 +150,8 @@ function parseGoalsTSV(text, monthsShort) {
         const paramStr = getVal(idx.param);
 
         // New FIRE/Goals Strategy Columns
-        let rawPriority = getVal(3);
-        let rawYield = getVal(4);
+        let rawPriority = idx.priority > -1 ? getVal(idx.priority) : getVal(3);
+        let rawYield = idx.yieldRate > -1 ? getVal(idx.yieldRate) : getVal(4);
 
         // Priority Sanitization
         let priority = 'Baixa';
