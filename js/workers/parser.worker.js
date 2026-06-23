@@ -146,6 +146,30 @@ function parseGoalsTSV(text, monthsShort) {
         const total = parseMoney(getVal(idx.total));
         const current = parseMoney(getVal(idx.current));
         const paramStr = getVal(idx.param);
+
+        // New FIRE/Goals Strategy Columns
+        let rawPriority = getVal(3);
+        let rawYield = getVal(4);
+
+        // Priority Sanitization
+        let priority = 'Baixa';
+        if (rawPriority && typeof rawPriority === 'string') {
+            const trimmed = rawPriority.trim();
+            if (trimmed.length > 0) {
+                priority = trimmed.charAt(0).toUpperCase() + trimmed.slice(1).toLowerCase();
+            }
+        }
+
+        // YieldRate Sanitization
+        let yieldRate = 0;
+        if (rawYield && typeof rawYield === 'string') {
+            let cleaned = rawYield.replace(/%/g, '').replace(',', '.').trim();
+            let parsedYield = parseFloat(cleaned);
+            if (!isNaN(parsedYield)) {
+                yieldRate = parsedYield / 100;
+            }
+        }
+
         let monthlyContribution = 0; let monthsLeft = 0;
         const remainingValue = Math.max(0, total - current);
         const dateMatch = paramStr.match(/(\d{1,2})[\/\-](\d{2,4})/) || paramStr.match(/([a-zA-Z]{3})[\/\-](\d{2,4})/);
@@ -174,7 +198,9 @@ function parseGoalsTSV(text, monthsShort) {
             monthly: monthlyContribution,
             monthsLeft,
             image: idx.image > -1 ? getVal(idx.image) : '',
-            percent: total > 0 ? (current / total) * 100 : 0
+            percent: total > 0 ? (current / total) * 100 : 0,
+            priority,
+            yieldRate
         };
     }).filter(g => g.total > 0);
 }
