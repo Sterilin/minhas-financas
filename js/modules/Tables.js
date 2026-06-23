@@ -24,23 +24,25 @@ export const Tables = {
         });
     },
 
+
     switchSubTab(tabName) {
         this.currentSubTab = tabName;
 
-        // 1. Atualiza visual dos botões
+        // 1. Atualiza visual dos botões na Sidebar
         const buttons = ['audit', 'bradesco', 'santander-acc', 'santander-card'];
         buttons.forEach(btn => {
             const el = document.getElementById(`tab-btn-${btn}`);
             if (el) {
                 if (btn === tabName) {
-                    el.className = "px-3 py-1.5 text-xs font-medium rounded-md transition-all shadow-sm bg-white text-gray-800 dark:bg-gray-600 dark:text-white whitespace-nowrap";
+                    el.className = "flex items-center gap-3 px-3 py-2.5 text-sm font-medium rounded-xl transition-all bg-indigo-50 text-indigo-700 dark:bg-indigo-500/20 dark:text-indigo-300 w-full text-left";
                 } else {
-                    el.className = "px-3 py-1.5 text-xs font-medium rounded-md transition-all text-gray-500 hover:text-gray-700 dark:text-gray-400 whitespace-nowrap";
+                    el.className = "flex items-center gap-3 px-3 py-2.5 text-sm font-medium rounded-xl transition-all text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800 w-full text-left";
                 }
             }
         });
 
         // 2. Alterna a visibilidade das áreas
+
         const auditView = document.getElementById('subview-audit');
         const bankView = document.getElementById('subview-bank');
 
