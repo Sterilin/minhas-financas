@@ -137,7 +137,9 @@ function parseGoalsTSV(text, monthsShort) {
         total: headers.findIndex(h => h.includes('total') || h.includes('alvo')),
         current: headers.findIndex(h => h.includes('atual') || h.includes('acumulado')),
         param: headers.findIndex(h => h.includes('aporte') || h.includes('mensal') || h.includes('meta')),
-        image: headers.findIndex(h => h.includes('imagem') || h.includes('img'))
+        image: headers.findIndex(h => h.includes('imagem') || h.includes('img')),
+        priority: headers.findIndex(h => h.includes('prioridade')),
+        yieldRate: headers.findIndex(h => h.includes('rendimento'))
     };
 
     return rows.slice(1).map(row => {
@@ -147,6 +149,19 @@ function parseGoalsTSV(text, monthsShort) {
         const current = parseMoney(getVal(idx.current));
         const paramStr = getVal(idx.param);
         let monthlyContribution = 0; let monthsLeft = 0;
+
+        let priority = idx.priority > -1 ? getVal(idx.priority) : '';
+        priority = priority ? priority : 'Sem Prioridade';
+
+        const yieldStr = idx.yieldRate > -1 ? getVal(idx.yieldRate) : '';
+        let yieldRate = 0;
+        if (yieldStr) {
+            let s = yieldStr.replace('%', '');
+            if (s.indexOf(',') > -1) {
+                s = s.replace(',', '.');
+            }
+            yieldRate = (parseFloat(s) || 0) / 100;
+        }
         const remainingValue = Math.max(0, total - current);
         const dateMatch = paramStr.match(/(\d{1,2})[\/\-](\d{2,4})/) || paramStr.match(/([a-zA-Z]{3})[\/\-](\d{2,4})/);
 
@@ -174,7 +189,9 @@ function parseGoalsTSV(text, monthsShort) {
             monthly: monthlyContribution,
             monthsLeft,
             image: idx.image > -1 ? getVal(idx.image) : '',
-            percent: total > 0 ? (current / total) * 100 : 0
+            percent: total > 0 ? (current / total) * 100 : 0,
+            priority,
+            yieldRate
         };
     }).filter(g => g.total > 0);
 }
