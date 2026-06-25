@@ -3,6 +3,8 @@ import { DataService } from '../core/DataService.js';
 import { Utils } from '../core/Utils.js';
 
 export const Goals = {
+    currentSubTab: 'health',
+
     init() {
         this.render();
         DataService.subscribe(() => this.render());
@@ -24,55 +26,140 @@ export const Goals = {
         });
     },
 
+
+    switchSubTab(tabName) {
+        this.currentSubTab = tabName;
+
+        // Update button visual styles
+        const buttons = ['health', 'tracking', 'simulators'];
+        buttons.forEach(btn => {
+            const el = document.getElementById(`tab-btn-${btn}`);
+            if (el) {
+                if (btn === tabName) {
+                    el.className = "flex items-center gap-3 px-3 py-2.5 text-sm font-medium rounded-xl transition-all bg-indigo-50 text-indigo-700 dark:bg-indigo-500/20 dark:text-indigo-300 w-full text-left whitespace-nowrap";
+                } else {
+                    el.className = "flex items-center gap-3 px-3 py-2.5 text-sm font-medium rounded-xl transition-all text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800 w-full text-left whitespace-nowrap";
+                }
+            }
+
+            // Hide/show views
+            const view = document.getElementById(`subview-${btn}`);
+            if (view) {
+                if (btn === tabName) {
+                    view.classList.remove('hidden');
+                } else {
+                    view.classList.add('hidden');
+                }
+            }
+        });
+    },
+
     getTemplate() {
         return `
             <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
                 <h2 class="text-xl font-bold text-gray-800 dark:text-white">Metas & Saúde Financeira</h2>
 
                 <div class="flex gap-2">
-                    <button onclick="Goals.openCalculator()" class="text-xs bg-emerald-50 text-emerald-600 border border-emerald-200 hover:bg-emerald-100 px-3 py-1.5 rounded-lg transition-colors flex items-center gap-2 dark:bg-emerald-900/30 dark:text-emerald-300 dark:border-emerald-800 dark:hover:bg-emerald-900/50 cursor-pointer shadow-sm">
-                        <i class="fa-solid fa-calculator"></i> Simular Viagem
-                    </button>
-
                     <button onclick="window.open('${AppParams.urls.goalsEdit}', '_blank')" class="text-xs bg-indigo-50 text-indigo-600 border border-indigo-200 hover:bg-indigo-100 px-3 py-1.5 rounded-lg transition-colors flex items-center gap-2 dark:bg-indigo-900/30 dark:text-indigo-300 dark:border-indigo-800 dark:hover:bg-indigo-900/50 cursor-pointer shadow-sm">
                         <i class="fa-solid fa-pen-to-square"></i> Editar Planilha
                     </button>
                 </div>
             </div>
 
-            <div class="bg-white p-6 rounded-xl card-shadow dark:bg-gray-800 transition-theme mb-8 border-l-4 border-emerald-500">
-                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                    <div>
-                        <h4 class="text-sm font-bold text-gray-800 dark:text-white flex items-center gap-2">
-                            <i class="fa-solid fa-shield-heart text-emerald-500"></i> Cobertura de Emergência (Runway)
-                        </h4>
-                        <p class="text-xs text-gray-500 dark:text-gray-400 mt-1 max-w-md">
-                            Baseado na sua média de gastos real dos últimos 6 meses.
-                        </p>
+            <div class="flex flex-col md:flex-row gap-6">
+                <!-- Sidebar -->
+                <nav class="w-full md:w-64 flex-shrink-0 flex md:flex-col gap-2 overflow-x-auto pb-2 md:pb-0 hide-scrollbar" id="goals-sidebar">
+                    <button id="tab-btn-health" onclick="Goals.switchSubTab('health')" class="flex items-center gap-3 px-3 py-2.5 text-sm font-medium rounded-xl transition-all bg-indigo-50 text-indigo-700 dark:bg-indigo-500/20 dark:text-indigo-300 w-full text-left whitespace-nowrap">
+                        <i class="fa-solid fa-heart-pulse w-5 text-center text-indigo-500"></i> Saúde & FIRE
+                    </button>
+                    <button id="tab-btn-tracking" onclick="Goals.switchSubTab('tracking')" class="flex items-center gap-3 px-3 py-2.5 text-sm font-medium rounded-xl transition-all text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800 w-full text-left whitespace-nowrap">
+                        <i class="fa-solid fa-bullseye w-5 text-center"></i> Objetivos
+                    </button>
+                    <button id="tab-btn-simulators" onclick="Goals.switchSubTab('simulators')" class="flex items-center gap-3 px-3 py-2.5 text-sm font-medium rounded-xl transition-all text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800 w-full text-left whitespace-nowrap">
+                        <i class="fa-solid fa-calculator w-5 text-center"></i> Simuladores
+                    </button>
+                </nav>
+
+                <!-- Subviews Container -->
+                <div class="flex-grow flex flex-col min-w-0">
+
+                    <!-- Subview: Saúde & FIRE -->
+                    <div id="subview-health" class="">
+                        <div class="bg-white p-6 rounded-xl card-shadow dark:bg-gray-800 transition-theme mb-8 border-l-4 border-emerald-500">
+                            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                                <div>
+                                    <h4 class="text-sm font-bold text-gray-800 dark:text-white flex items-center gap-2">
+                                        <i class="fa-solid fa-shield-heart text-emerald-500"></i> Cobertura de Emergência (Runway)
+                                    </h4>
+                                    <p class="text-xs text-gray-500 dark:text-gray-400 mt-1 max-w-md">
+                                        Baseado na sua média de gastos real dos últimos 6 meses.
+                                    </p>
+                                </div>
+                                <div class="text-right">
+                                    <div class="text-3xl font-bold text-gray-800 dark:text-white val-privacy" id="goal-runway-val">...</div>
+                                    <div class="text-[10px] text-gray-400 uppercase tracking-wider font-semibold">Meses de Cobertura</div>
+                                </div>
+                            </div>
+                            <div class="relative pt-6 pb-2 mt-2">
+                                <div class="flex mb-2 items-center justify-between text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide"><span>Crítico</span><span>Saudável (6 Meses)</span><span>Excelente (12+)</span></div>
+                                <div class="overflow-hidden h-3 mb-2 text-xs flex rounded-full bg-gray-200 dark:bg-gray-700"><div id="goal-runway-bar" style="width:0%" class="shadow-none flex flex-col text-center whitespace-nowrap text-white justify-center bg-emerald-500 transition-all duration-1000 ease-out"></div></div>
+                                <div class="flex justify-between text-[10px] text-gray-400"><span>0</span><span>6</span><span>12+</span></div>
+                            </div>
+                            <div class="grid grid-cols-2 gap-4 mt-4 border-t border-gray-100 dark:border-gray-700 pt-4">
+                                <div class="text-center"><div class="text-[10px] text-gray-400 uppercase tracking-wider mb-1">Saldo Total Disponível</div><div class="text-sm font-bold text-gray-700 dark:text-gray-200 val-privacy" id="goal-total-balance">...</div></div>
+                                <div class="text-center border-l border-gray-100 dark:border-gray-700"><div class="text-[10px] text-gray-400 uppercase tracking-wider mb-1">Média Gastos (6 Meses)</div><div class="text-sm font-bold text-gray-700 dark:text-gray-200 val-privacy" id="goal-avg-expense">...</div></div>
+                            </div>
+                        </div>
                     </div>
-                    <div class="text-right">
-                        <div class="text-3xl font-bold text-gray-800 dark:text-white val-privacy" id="goal-runway-val">...</div>
-                        <div class="text-[10px] text-gray-400 uppercase tracking-wider font-semibold">Meses de Cobertura</div>
+
+                    <!-- Subview: Objetivos -->
+                    <div id="subview-tracking" class="hidden">
+                        <div class="flex justify-between items-center mb-4">
+                            <h3 class="font-semibold text-gray-700 dark:text-gray-200 px-1 flex items-center gap-2">
+                                <i class="fa-solid fa-bullseye text-indigo-500"></i> Meus Objetivos
+                            </h3>
+                            <select id="goal-filter" class="text-sm border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500 p-1.5" onchange="Goals.render()">
+                                <option value="all">Todas as Prioridades</option>
+                                <option value="alta">Alta</option>
+                                <option value="media">Média</option>
+                                <option value="baixa">Baixa</option>
+                            </select>
+                        </div>
+                        <div id="goals-grid" class="flex flex-col gap-4 pb-6">
+                            <div class="text-center py-8 text-gray-400 text-sm">Carregando metas...</div>
+                        </div>
                     </div>
-                </div>
-                <div class="relative pt-6 pb-2 mt-2">
-                    <div class="flex mb-2 items-center justify-between text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide"><span>Crítico</span><span>Saudável (6 Meses)</span><span>Excelente (12+)</span></div>
-                    <div class="overflow-hidden h-3 mb-2 text-xs flex rounded-full bg-gray-200 dark:bg-gray-700"><div id="goal-runway-bar" style="width:0%" class="shadow-none flex flex-col text-center whitespace-nowrap text-white justify-center bg-emerald-500 transition-all duration-1000 ease-out"></div></div>
-                    <div class="flex justify-between text-[10px] text-gray-400"><span>0</span><span>6</span><span>12+</span></div>
-                </div>
-                <div class="grid grid-cols-2 gap-4 mt-4 border-t border-gray-100 dark:border-gray-700 pt-4">
-                    <div class="text-center"><div class="text-[10px] text-gray-400 uppercase tracking-wider mb-1">Saldo Total Disponível</div><div class="text-sm font-bold text-gray-700 dark:text-gray-200 val-privacy" id="goal-total-balance">...</div></div>
-                    <div class="text-center border-l border-gray-100 dark:border-gray-700"><div class="text-[10px] text-gray-400 uppercase tracking-wider mb-1">Média Gastos (6 Meses)</div><div class="text-sm font-bold text-gray-700 dark:text-gray-200 val-privacy" id="goal-avg-expense">...</div></div>
+
+                    <!-- Subview: Simuladores -->
+                    <div id="subview-simulators" class="hidden">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <!-- Simular Viagem Card -->
+                            <div class="bg-white p-5 rounded-xl border border-gray-100 dark:bg-gray-800 dark:border-gray-700 hover:shadow-md transition-all flex flex-col justify-between">
+                                <div>
+                                    <div class="w-10 h-10 rounded-full bg-emerald-100 dark:bg-emerald-900/50 flex items-center justify-center text-emerald-600 dark:text-emerald-400 mb-3">
+                                        <i class="fa-solid fa-plane-departure"></i>
+                                    </div>
+                                    <h4 class="font-bold text-gray-800 dark:text-white mb-1">Simulador de Viagem</h4>
+                                    <p class="text-xs text-gray-500 dark:text-gray-400 mb-4">Calcule os custos de hospedagem, alimentação e transporte para sua próxima viagem e veja em quanto tempo conseguirá atingir a meta.</p>
+                                </div>
+                                <button onclick="Goals.openCalculator()" class="w-full text-sm bg-emerald-50 text-emerald-600 border border-emerald-200 hover:bg-emerald-100 py-2 rounded-lg transition-colors font-medium dark:bg-emerald-900/30 dark:text-emerald-300 dark:border-emerald-800 dark:hover:bg-emerald-900/50">
+                                    Abrir Simulador
+                                </button>
+                            </div>
+
+                            <!-- Calculadora FIRE Placeholder -->
+                            <div class="bg-white p-5 rounded-xl border border-dashed border-gray-300 dark:bg-gray-800/50 dark:border-gray-600 flex flex-col items-center justify-center text-center opacity-70">
+                                <div class="w-10 h-10 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center text-gray-400 mb-3">
+                                    <i class="fa-solid fa-fire"></i>
+                                </div>
+                                <h4 class="font-bold text-gray-600 dark:text-gray-300 mb-1">Calculadora FIRE</h4>
+                                <p class="text-xs text-gray-400 dark:text-gray-500">Independência Financeira.<br>Em breve.</p>
+                            </div>
+                        </div>
+                    </div>
+
                 </div>
             </div>
-
-            <h3 class="font-semibold text-gray-700 dark:text-gray-200 mb-4 px-1 flex items-center gap-2">
-                <i class="fa-solid fa-bullseye text-indigo-500"></i> Meus Objetivos
-            </h3>
-            <div id="goals-grid" class="flex flex-col gap-4 pb-6">
-                <div class="text-center py-8 text-gray-400 text-sm">Carregando metas...</div>
-            </div>
-
             <div id="calc-modal" class="hidden fixed inset-0 z-50 overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
                 <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
                     <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" aria-hidden="true" onclick="Goals.closeCalculator()"></div>
@@ -178,7 +265,10 @@ export const Goals = {
     render() {
         const container = Utils.DOM.get('view-goals');
         if (!container) return;
-        if (!container.querySelector('#goals-grid')) container.innerHTML = this.getTemplate();
+        if (!container.querySelector('#goals-grid')) {
+            container.innerHTML = this.getTemplate();
+            this.switchSubTab(this.currentSubTab); // Ensure initial view is set
+        }
 
         const stats = DataService.getGoalsStats();
 
@@ -196,8 +286,25 @@ export const Goals = {
         // Renderiza Grid
         const grid = Utils.DOM.get('goals-grid');
         if(grid) {
-            if (stats.goals && stats.goals.length > 0) {
-                grid.innerHTML = stats.goals.map(g => this.createGoalCard(g)).join('');
+            let goalsToRender = stats.goals || [];
+
+            // Apply priority filter
+            const filterEl = Utils.DOM.get('goal-filter');
+            if (filterEl && filterEl.value !== 'all') {
+                 const filterVal = filterEl.value.toLowerCase();
+                 // Try to filter by title or a hypothetical priority field.
+                 // Often priority is represented in the title (e.g. "[Alta] Comprar carro") or a dedicated column.
+                 // We'll safely filter if priority exists.
+                 goalsToRender = goalsToRender.filter(g => {
+                     if (g.priority) return g.priority.toLowerCase() === filterVal;
+                     // If no priority is defined, we'll just return true to not break the view
+                     // Or perhaps try to parse it from the title.
+                     return true;
+                 });
+            }
+
+            if (goalsToRender && goalsToRender.length > 0) {
+                grid.innerHTML = goalsToRender.map(g => this.createGoalCard(g)).join('');
             } else {
                 grid.innerHTML = `<div class="text-center py-8 text-gray-400 text-xs border border-dashed border-gray-300 rounded-lg bg-gray-50 dark:bg-gray-800/50"><p class="font-bold mb-1">Nenhuma meta encontrada</p><p>Verifique se os dados estão preenchidos na aba 'Metas' da planilha.</p></div>`;
             }

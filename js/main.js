@@ -27,6 +27,7 @@ window.Handlers = {
 
 // Also expose Tables to handle its specific onclick in index.html (Tables.switchSubTab)
 window.Tables = Tables;
+window.Goals = Goals;
 
 // Expose DataService for Playwright verification
 window.DataService = DataService;
